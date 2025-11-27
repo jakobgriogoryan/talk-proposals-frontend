@@ -8,6 +8,7 @@
       :filters="filters"
       :tags="tags"
       :show-status-filter="true"
+      :proposals-count="pagination?.total || proposals.length"
       @update:filters="updateFilters"
     />
 
@@ -30,16 +31,33 @@
               {{ proposal.title }}
             </router-link>
           </h3>
+          <div class="relative shrink-0">
           <select
             :value="proposal.status"
             @change="updateStatus(proposal.id, $event.target.value)"
-            class="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium border shrink-0 shadow-sm hover:shadow-md transition-all bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 border-gray-300 dark:border-ocean-600"
-            :class="getStatusClass(proposal.status)"
+              class="appearance-none px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-10 rounded-lg text-xs sm:text-sm font-medium border-2 shrink-0 shadow-sm hover:shadow-md transition-all bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 border-gray-300 dark:border-ocean-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-400 cursor-pointer"
+              :class="getStatusSelectClass(proposal.status)"
           >
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+              <option value="pending" class="bg-white dark:bg-ocean-900">Pending</option>
+              <option value="approved" class="bg-white dark:bg-ocean-900">Approved</option>
+              <option value="rejected" class="bg-white dark:bg-ocean-900">Rejected</option>
           </select>
+            <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
+              <svg
+                class="w-4 h-4 text-gray-400 dark:text-ocean-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
         <p class="text-gray-600 dark:text-ocean-300 mb-2 sm:mb-3 line-clamp-2 text-xs sm:text-sm">
           {{ proposal.description }}
@@ -109,7 +127,7 @@ const fetchProposals = async (page = 1) => {
       if (key === 'tags') {
         if (Array.isArray(value) && value.length > 0) {
           params.tags = value.join(',')
-        }
+    }
         return
       }
 
@@ -170,6 +188,12 @@ const getStatusClass = (status) => {
   if (status === 'approved') return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
   if (status === 'rejected') return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
   return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+}
+
+const getStatusSelectClass = (status) => {
+  if (status === 'approved') return 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
+  if (status === 'rejected') return 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
+  return 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
 }
 
 onMounted(() => {

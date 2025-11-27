@@ -6,9 +6,8 @@
       </h2>
       <div class="flex items-center gap-2">
         <button
-          @click="previousSlide"
-          :disabled="currentIndex === 0"
-          class="p-2 rounded-full bg-white dark:bg-ocean-800 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-110"
+          @click="handlePreviousClick"
+          class="p-2 rounded-full bg-white dark:bg-ocean-800 shadow-md hover:shadow-lg transition-all hover:scale-110"
           aria-label="Previous slide"
         >
           <svg class="w-5 h-5 text-gray-700 dark:text-ocean-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -16,9 +15,8 @@
           </svg>
         </button>
         <button
-          @click="nextSlide"
-          :disabled="currentIndex >= maxIndex"
-          class="p-2 rounded-full bg-white dark:bg-ocean-800 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-110"
+          @click="handleNextClick"
+          class="p-2 rounded-full bg-white dark:bg-ocean-800 shadow-md hover:shadow-lg transition-all hover:scale-110"
           aria-label="Next slide"
         >
           <svg class="w-5 h-5 text-gray-700 dark:text-ocean-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,10 +26,13 @@
       </div>
     </div>
     
-    <div class="relative overflow-hidden rounded-xl">
+    <div class="relative overflow-hidden rounded-xl w-full">
       <div
-        class="flex transition-transform duration-500 ease-in-out touch-pan-y"
-        :style="{ transform: `translateX(-${currentIndex * (100 / slidesPerView.value)}%)` }"
+        ref="sliderContainer"
+        class="flex transition-transform duration-700 ease-in-out"
+        :style="{ 
+          transform: `translateX(-${transformValue}%)`
+        }"
         @touchstart="handleTouchStart"
         @touchmove="handleTouchMove"
         @touchend="handleTouchEnd"
@@ -39,16 +40,12 @@
         <div
           v-for="(proposal, index) in proposals"
           :key="proposal.id"
-          :class="[
-            'px-2 sm:px-3',
-            'w-full sm:w-1/2 lg:w-1/3',
-            'flex-shrink-0',
-            'relative'
-          ]"
+          class="flex-shrink-0 px-2 sm:px-3"
+          :style="{ width: slideWidth }"
         >
           <div
             @click="goToProposal(proposal.id)"
-            class="bg-gradient-to-br from-white to-blue-50/50 dark:from-ocean-800 dark:to-ocean-700/50 rounded-xl shadow-lg p-4 sm:p-6 border border-blue-100 dark:border-ocean-600 hover:shadow-xl hover:z-10 transition-all duration-300 cursor-pointer hover:-translate-y-1 relative"
+            class="bg-gradient-to-br from-white to-blue-50/50 dark:from-ocean-800 dark:to-ocean-700/50 rounded-xl shadow-lg p-4 sm:p-6 border border-blue-100 dark:border-ocean-600 hover:shadow-xl hover:z-10 transition-all duration-300 cursor-pointer hover:-translate-y-1 relative h-full"
           >
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
               <h3 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-ocean-100 line-clamp-2 flex-1">
@@ -115,7 +112,8 @@ const router = useRouter()
 const proposals = ref([])
 const currentIndex = ref(0)
 const autoSlideInterval = ref(null)
-const slidesPerView = ref(1)
+const slidesPerView = ref(1) // Will be updated based on screen size
+const sliderContainer = ref(null)
 
 // Touch/swipe handling
 const touchStartX = ref(0)
@@ -123,12 +121,21 @@ const touchEndX = ref(0)
 const minSwipeDistance = 50
 
 const updateSlidesPerView = () => {
+  const oldValue = slidesPerView.value
+  // Responsive: 1 on mobile, 2 on tablet, 3 on desktop
   if (window.innerWidth < 640) {
     slidesPerView.value = 1
   } else if (window.innerWidth < 1024) {
     slidesPerView.value = 2
   } else {
     slidesPerView.value = 3
+  }
+  // Reset to first slide if slides per view changed to prevent index out of bounds
+  if (oldValue !== slidesPerView.value) {
+    const newMaxIndex = Math.max(0, Math.ceil(proposals.value.length / slidesPerView.value) - 1)
+    if (currentIndex.value > newMaxIndex) {
+      currentIndex.value = 0
+    }
   }
 }
 
@@ -139,6 +146,18 @@ const slideCount = computed(() => {
 
 const maxIndex = computed(() => {
   return Math.max(0, slideCount.value - 1)
+})
+
+const slideWidth = computed(() => {
+  if (slidesPerView.value === 0) return '100%'
+  // Each slide should be 100% / slidesPerView of the viewport
+  return `${100 / slidesPerView.value}%`
+})
+
+const transformValue = computed(() => {
+  if (slidesPerView.value === 0) return 0
+  // Transform by currentIndex * (100% / slidesPerView) of viewport
+  return currentIndex.value * (100 / slidesPerView.value)
 })
 
 const fetchTopRated = async () => {
@@ -172,8 +191,32 @@ const previousSlide = () => {
   }
 }
 
+// Handle button clicks - pause auto-slide briefly and restart (forever loop)
+const handleNextClick = () => {
+  stopAutoSlide()
+  nextSlide()
+  // Resume auto-slide after a delay (forever loop)
+  setTimeout(() => {
+    startAutoSlide()
+  }, 5000) // Resume after 5 seconds
+}
+
+const handlePreviousClick = () => {
+  stopAutoSlide()
+  previousSlide()
+  // Resume auto-slide after a delay (forever loop)
+  setTimeout(() => {
+    startAutoSlide()
+  }, 5000) // Resume after 5 seconds
+}
+
 const goToSlide = (index) => {
+  stopAutoSlide()
   currentIndex.value = index
+  // Resume auto-slide after a delay (forever loop)
+  setTimeout(() => {
+    startAutoSlide()
+  }, 5000) // Resume after 5 seconds
 }
 
 const goToProposal = (id) => {
@@ -187,9 +230,10 @@ const getStatusClass = (status) => {
 }
 
 const startAutoSlide = () => {
+  stopAutoSlide() // Clear any existing interval first
   autoSlideInterval.value = setInterval(() => {
-    previousSlide() // Rotate to the left (previous slide)
-  }, 5000) // Auto-advance every 5 seconds
+    previousSlide() // Rotate to the left (previous slide) - loops forever
+  }, 7000) // Auto-advance every 7 seconds (slower)
 }
 
 const stopAutoSlide = () => {
@@ -228,10 +272,9 @@ const handleTouchEnd = () => {
   touchStartX.value = 0
   touchEndX.value = 0
   
-  // Resume auto-slide after a delay
   setTimeout(() => {
     startAutoSlide()
-  }, 3000)
+  }, 5000)
 }
 
 onMounted(() => {

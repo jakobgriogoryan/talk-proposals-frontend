@@ -8,6 +8,7 @@
       :filters="filters"
       :tags="tags"
       :show-status-filter="true"
+      :proposals-count="pagination?.total || proposals.length"
       @update:filters="updateFilters"
     />
 

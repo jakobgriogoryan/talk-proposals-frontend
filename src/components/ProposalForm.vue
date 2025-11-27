@@ -5,12 +5,12 @@
         Title *
       </label>
       <input
-        v-model="form.title"
-        type="text"
-        required
-        maxlength="255"
-        class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-        :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.title }"
+          v-model="form.title"
+          type="text"
+          required
+          maxlength="255"
+          class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
+          :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.title }"
       />
       <div v-if="errors.title" class="text-red-500 dark:text-red-400 text-sm mt-1">
         {{ errors.title }}
@@ -22,11 +22,11 @@
         Description *
       </label>
       <textarea
-        v-model="form.description"
-        rows="6"
-        required
-        class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 text-sm sm:text-base resize-y bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-        :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.description }"
+          v-model="form.description"
+          rows="6"
+          required
+          class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 text-sm sm:text-base resize-y bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
+          :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.description }"
       ></textarea>
       <div v-if="errors.description" class="text-red-500 dark:text-red-400 text-sm mt-1">
         {{ errors.description }}
@@ -38,11 +38,11 @@
         PDF File <span class="text-gray-500 dark:text-ocean-400 text-xs">(optional, max 4MB)</span>
       </label>
       <input
-        type="file"
-        accept=".pdf"
-        @change="handleFileChange"
-        class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 text-sm sm:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-ocean-700 file:text-blue-700 dark:file:text-ocean-200 hover:file:bg-blue-100 dark:hover:file:bg-ocean-600 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-        :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.file || fileError }"
+          type="file"
+          accept=".pdf"
+          @change="handleFileChange"
+          class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 text-sm sm:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-ocean-700 file:text-blue-700 dark:file:text-ocean-200 hover:file:bg-blue-100 dark:hover:file:bg-ocean-600 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
+          :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.file || fileError }"
       />
       <p class="text-xs text-gray-500 dark:text-ocean-400 mt-1">Maximum file size: 4MB. Only PDF files are allowed.</p>
       <div v-if="errors.file" class="text-red-500 dark:text-red-400 text-sm mt-1">
@@ -60,20 +60,20 @@
       <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
         Tags <span class="text-gray-500 dark:text-ocean-400 text-xs">(optional)</span>
       </label>
-      
+
       <!-- Selected Tags Display -->
       <div v-if="form.tags.length > 0" class="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
         <span
-          v-for="(tag, index) in form.tags"
-          :key="index"
-          class="bg-gradient-to-r from-blue-100 to-blue-50 dark:from-ocean-700 dark:to-ocean-600 text-blue-800 dark:text-ocean-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm flex items-center shadow-sm hover:shadow-md transition-shadow"
+            v-for="(tag, index) in form.tags"
+            :key="index"
+            class="bg-gradient-to-r from-blue-100 to-blue-50 dark:from-ocean-700 dark:to-ocean-600 text-blue-800 dark:text-ocean-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm flex items-center shadow-sm hover:shadow-md transition-shadow"
         >
           {{ tag }}
           <button
-            type="button"
-            @click="removeTag(index)"
-            class="ml-1.5 sm:ml-2 text-blue-600 dark:text-ocean-300 hover:text-blue-800 dark:hover:text-ocean-100 text-base sm:text-lg leading-none transition-colors"
-            aria-label="Remove tag"
+              type="button"
+              @click="removeTag(index)"
+              class="ml-1.5 sm:ml-2 text-blue-600 dark:text-ocean-300 hover:text-blue-800 dark:hover:text-ocean-100 text-base sm:text-lg leading-none transition-colors"
+              aria-label="Remove tag"
           >
             ×
           </button>
@@ -84,13 +84,13 @@
       <div class="space-y-2">
         <div class="relative">
           <input
-            v-model="tagInput"
-            type="text"
-            @keydown.enter.prevent="addTag"
-            @input="filterExistingTags"
-            placeholder="Type tag name and press Enter, or select from existing tags below"
-            class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
-            :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.tags }"
+              v-model="tagInput"
+              type="text"
+              @keydown.enter.prevent="addTag"
+              @input="filterExistingTags"
+              placeholder="Type tag name and press Enter, or select from existing tags below"
+              class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
+              :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.tags }"
           />
         </div>
 
@@ -99,13 +99,13 @@
           <p class="text-xs text-gray-600 dark:text-ocean-300 mb-2">Select from existing tags:</p>
           <div class="flex flex-wrap gap-1.5">
             <button
-              v-for="tag in availableTags"
-              :key="tag.id"
-              type="button"
-              @click="selectExistingTag(tag.name)"
-              :disabled="form.tags.includes(tag.name)"
-              class="px-2 py-1 rounded-full text-xs font-medium transition-all shadow-sm"
-              :class="form.tags.includes(tag.name)
+                v-for="tag in availableTags"
+                :key="tag.id"
+                type="button"
+                @click="selectExistingTag(tag.name)"
+                :disabled="form.tags.includes(tag.name)"
+                class="px-2 py-1 rounded-full text-xs font-medium transition-all shadow-sm"
+                :class="form.tags.includes(tag.name)
                 ? 'bg-blue-200 dark:bg-ocean-700 text-blue-700 dark:text-ocean-300 cursor-not-allowed'
                 : 'bg-white dark:bg-ocean-800 text-gray-700 dark:text-ocean-200 border border-gray-300 dark:border-ocean-600 hover:bg-blue-50 dark:hover:bg-ocean-700 hover:border-blue-300 dark:hover:border-ocean-500 hover:shadow-md transform hover:scale-105'"
             >
@@ -122,15 +122,15 @@
 
     <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:space-x-4">
       <button
-        type="submit"
-        :disabled="loading"
-        class="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 dark:from-ocean-500 dark:to-ocean-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 dark:hover:from-ocean-600 dark:hover:to-ocean-700 disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base font-medium"
+          type="submit"
+          :disabled="loading"
+          class="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 dark:from-ocean-500 dark:to-ocean-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 dark:hover:from-ocean-600 dark:hover:to-ocean-700 disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base font-medium"
       >
         {{ loading ? 'Saving...' : (isEdit ? 'Update' : 'Submit') }}
       </button>
       <router-link
-        to="/proposals"
-        class="w-full sm:w-auto bg-gray-200 dark:bg-ocean-700 text-gray-700 dark:text-ocean-200 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-ocean-600 transition-all shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-center text-sm sm:text-base font-medium"
+          to="/proposals"
+          class="w-full sm:w-auto bg-gray-200 dark:bg-ocean-700 text-gray-700 dark:text-ocean-200 px-6 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-ocean-600 transition-all shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-center text-sm sm:text-base font-medium"
       >
         Cancel
       </router-link>
@@ -174,19 +174,19 @@ const form = ref({
 })
 
 watch(
-  () => props.proposal,
-  (newProposal) => {
-    if (newProposal) {
-      form.value = {
-        title: newProposal.title || '',
-        description: newProposal.description || '',
-        file: null,
-        tags: newProposal.tags?.map(t => t.name) || [],
+    () => props.proposal,
+    (newProposal) => {
+      if (newProposal) {
+        form.value = {
+          title: newProposal.title || '',
+          description: newProposal.description || '',
+          file: null,
+          tags: newProposal.tags?.map(t => t.name) || [],
+        }
+        existingFile.value = newProposal.file_path || null
       }
-      existingFile.value = newProposal.file_path || null
-    }
-  },
-  { deep: true }
+    },
+    { deep: true }
 )
 
 const availableTags = computed(() => {
@@ -194,9 +194,9 @@ const availableTags = computed(() => {
     return allTags.value.filter(tag => !form.value.tags.includes(tag.name))
   }
   const query = tagSearchQuery.value.toLowerCase().trim()
-  return allTags.value.filter(tag => 
-    !form.value.tags.includes(tag.name) && 
-    tag.name.toLowerCase().includes(query)
+  return allTags.value.filter(tag =>
+      !form.value.tags.includes(tag.name) &&
+      tag.name.toLowerCase().includes(query)
   )
 })
 
@@ -225,7 +225,7 @@ const selectExistingTag = (tagName) => {
 const handleFileChange = (event) => {
   fileError.value = ''
   const file = event.target.files[0]
-  
+
   if (!file) {
     form.value.file = null
     return

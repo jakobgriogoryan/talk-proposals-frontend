@@ -98,7 +98,7 @@
           <form @submit.prevent="handleUpdateReview" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
-                Rating * <span class="text-gray-500 dark:text-ocean-400 text-xs">(1-5 or 10)</span>
+                Rating *
               </label>
               <select
                 v-model="editReviewForm.rating"
@@ -106,12 +106,13 @@
                 class="w-full px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
               >
                 <option value="">Select rating</option>
-                <option value="1">1 - Poor</option>
-                <option value="2">2 - Fair</option>
-                <option value="3">3 - Good</option>
-                <option value="4">4 - Very Good</option>
-                <option value="5">5 - Excellent</option>
-                <option value="10">10 - Outstanding</option>
+                <option
+                  v-for="rating in ratingOptions"
+                  :key="rating.value"
+                  :value="rating.value"
+                >
+                  {{ rating.label }}
+                </option>
               </select>
             </div>
             <div>
@@ -177,6 +178,7 @@ const editReviewForm = ref({
 })
 const editReviewLoading = ref(false)
 const editReviewError = ref('')
+const ratingOptions = ref([])
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -414,8 +416,28 @@ const handleUpdateReview = async () => {
   }
 }
 
+const fetchRatingOptions = async () => {
+  try {
+    const response = await reviewsApi.getRatingOptions()
+    const data = response.data.data || response.data
+    ratingOptions.value = data.ratings || []
+  } catch (err) {
+    console.error('Error fetching rating options:', err)
+    // Fallback to default options if API fails
+    ratingOptions.value = [
+      { value: 1, label: '1 - Poor' },
+      { value: 2, label: '2 - Fair' },
+      { value: 3, label: '3 - Good' },
+      { value: 4, label: '4 - Very Good' },
+      { value: 5, label: '5 - Excellent' },
+      { value: 10, label: '10 - Outstanding' },
+    ]
+  }
+}
+
 onMounted(() => {
   fetchProposal()
+  fetchRatingOptions()
 })
 </script>
 

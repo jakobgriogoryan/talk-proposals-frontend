@@ -1,6 +1,9 @@
 import api from './axios'
 
 export const reviewsApi = {
+  getRatingOptions() {
+    return api.get('/reviews/rating-options')
+  },
   getForProposal(proposalId) {
     return api.get(`/proposals/${proposalId}/reviews`)
   },

@@ -15,6 +15,7 @@
     <ProposalFilters
       :filters="filters"
       :tags="tags"
+      :proposals-count="pagination?.total || proposals.length"
       @update:filters="updateFilters"
     />
 
@@ -81,7 +82,7 @@ const fetchProposals = async (page = 1) => {
       if (key === 'tags') {
         if (Array.isArray(value) && value.length > 0) {
           params.tags = value.join(',')
-        }
+    }
         return
       }
 

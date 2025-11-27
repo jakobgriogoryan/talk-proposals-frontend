@@ -137,7 +137,7 @@ const handleRegister = async () => {
     } else if (authStore.isSpeaker) {
       router.push('/proposals')
     } else {
-      router.push('/proposals')
+    router.push('/proposals')
     }
   } catch (err) {
     error.value = err.response?.data?.message || 'Registration failed'

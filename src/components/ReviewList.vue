@@ -5,10 +5,10 @@
       No reviews yet.
     </div>
     <div
-      v-for="review in reviews"
-      :key="review.id"
-      class="bg-white/95 dark:bg-ocean-800/95 backdrop-blur-sm p-3 sm:p-4 rounded-xl shadow-md border-l-4 hover:shadow-lg transition-all duration-300"
-      :class="getRatingColor(review.rating)"
+        v-for="review in reviews"
+        :key="review.id"
+        class="bg-white/95 dark:bg-ocean-800/95 backdrop-blur-sm p-3 sm:p-4 rounded-xl shadow-md border-l-4 hover:shadow-lg transition-all duration-300"
+        :class="getRatingColor(review.rating)"
     >
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 sm:gap-0 mb-2">
         <div class="flex-1">
@@ -22,10 +22,10 @@
             {{ review.rating }}{{ review.rating === 10 ? '' : '/5' }}
           </div>
           <button
-            v-if="isAdmin"
-            @click="$emit('edit', review)"
-            class="p-1.5 text-blue-600 dark:text-ocean-400 hover:text-blue-800 dark:hover:text-ocean-300 hover:bg-blue-50 dark:hover:bg-ocean-700 rounded transition-colors"
-            aria-label="Edit review"
+              v-if="isAdmin"
+              @click="$emit('edit', review)"
+              class="p-1.5 text-blue-600 dark:text-ocean-400 hover:text-blue-800 dark:hover:text-ocean-300 hover:bg-blue-50 dark:hover:bg-ocean-700 rounded transition-colors"
+              aria-label="Edit review"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

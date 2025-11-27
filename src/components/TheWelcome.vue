@@ -33,7 +33,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
     <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">VSCode</a>
     +
     <a href="https://github.com/vuejs/language-tools" target="_blank" rel="noopener"
-      >Vue - Official</a
+    >Vue - Official</a
     >. If you need to test your components and web pages, check out
     <a href="https://vitest.dev/" target="_blank" rel="noopener">Vitest</a>
     and
@@ -74,7 +74,7 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
     <a href="https://chat.vuejs.org" target="_blank" rel="noopener">Vue Land</a>
     (our official Discord server), or
     <a href="https://stackoverflow.com/questions/tagged/vue.js" target="_blank" rel="noopener"
-      >StackOverflow</a
+    >StackOverflow</a
     >. You should also follow the official
     <a href="https://bsky.app/profile/vuejs.org" target="_blank" rel="noopener">@vuejs.org</a>
     Bluesky account or the
