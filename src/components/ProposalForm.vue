@@ -9,7 +9,7 @@
         type="text"
         required
         maxlength="255"
-        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base"
         :class="{ 'border-red-300 focus:ring-red-500': errors.title }"
       />
       <div v-if="errors.title" class="text-red-500 text-sm mt-1">
@@ -66,7 +66,7 @@
         <span
           v-for="(tag, index) in form.tags"
           :key="index"
-          class="bg-blue-100 text-blue-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm flex items-center"
+          class="bg-gradient-to-r from-blue-100 to-blue-50 text-blue-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm flex items-center shadow-sm hover:shadow-md transition-shadow"
         >
           {{ tag }}
           <button
@@ -89,7 +89,7 @@
             @keydown.enter.prevent="addTag"
             @input="filterExistingTags"
             placeholder="Type tag name and press Enter, or select from existing tags below"
-            class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+            class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base"
             :class="{ 'border-red-300 focus:ring-red-500': errors.tags }"
           />
         </div>
@@ -104,10 +104,10 @@
               type="button"
               @click="selectExistingTag(tag.name)"
               :disabled="form.tags.includes(tag.name)"
-              class="px-2 py-1 rounded-full text-xs font-medium transition-all"
+              class="px-2 py-1 rounded-full text-xs font-medium transition-all shadow-sm"
               :class="form.tags.includes(tag.name)
                 ? 'bg-blue-200 text-blue-700 cursor-not-allowed'
-                : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:border-blue-300'"
+                : 'bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transform hover:scale-105'"
             >
               {{ tag.name }}
             </button>
@@ -124,13 +124,13 @@
       <button
         type="submit"
         :disabled="loading"
-        class="w-full sm:w-auto bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors text-sm sm:text-base"
+        class="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] text-sm sm:text-base font-medium"
       >
         {{ loading ? 'Saving...' : (isEdit ? 'Update' : 'Submit') }}
       </button>
       <router-link
         to="/proposals"
-        class="w-full sm:w-auto bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors text-center text-sm sm:text-base"
+        class="w-full sm:w-auto bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-all shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-center text-sm sm:text-base font-medium"
       >
         Cancel
       </router-link>

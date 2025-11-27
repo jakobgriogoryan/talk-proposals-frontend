@@ -50,5 +50,8 @@ export const proposalsApi = {
   getAllForAdmin(params = {}) {
     return api.get('/admin/proposals', { params })
   },
+  getTopRated(limit = 10) {
+    return api.get('/proposals/top-rated', { params: { limit } })
+  },
 }
 

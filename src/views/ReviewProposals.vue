@@ -1,6 +1,8 @@
 <template>
   <div>
-    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Proposals for Review</h1>
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-blue-800 dark:from-ocean-400 dark:to-ocean-300 bg-clip-text text-transparent">Proposals for Review</h1>
+
+    <TopRatedSlider />
 
     <ProposalFilters
       :filters="filters"
@@ -9,8 +11,8 @@
       @update:filters="updateFilters"
     />
 
-    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
-    <div v-else-if="proposals.length === 0" class="text-center py-8 sm:py-12 text-gray-500">
+    <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-ocean-400">Loading...</div>
+    <div v-else-if="proposals.length === 0" class="text-center py-8 sm:py-12 text-gray-500 dark:text-ocean-400">
       <p class="text-base sm:text-lg">No proposals found.</p>
     </div>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -32,10 +34,10 @@
         :key="page"
         @click="goToPage(page)"
         :class="[
-          'px-3 sm:px-4 py-2 rounded text-sm sm:text-base transition-colors',
+          'px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base transition-all font-medium',
           page === pagination.current_page
-            ? 'bg-blue-500 text-white'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-ocean-500 dark:to-ocean-600 text-white shadow-md'
+            : 'bg-gray-200 dark:bg-ocean-700 text-gray-700 dark:text-ocean-200 hover:bg-gray-300 dark:hover:bg-ocean-600 hover:shadow-sm transform hover:scale-105'
         ]"
       >
         {{ page }}
@@ -50,6 +52,7 @@ import { useRouter } from 'vue-router'
 import { proposalsApi, tagsApi } from '../api'
 import ProposalCard from '../components/ProposalCard.vue'
 import ProposalFilters from '../components/ProposalFilters.vue'
+import TopRatedSlider from '../components/TopRatedSlider.vue'
 
 const router = useRouter()
 const proposals = ref([])

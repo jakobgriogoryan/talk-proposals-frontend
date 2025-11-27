@@ -1,19 +1,19 @@
 <template>
   <div class="max-w-4xl mx-auto">
-    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
-    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 mb-4">
+    <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-ocean-400">Loading...</div>
+    <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-4">
       <div class="flex items-start">
         <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+          <svg class="h-5 w-5 text-red-400 dark:text-red-500" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
           </svg>
         </div>
         <div class="ml-3 flex-1">
-          <h3 class="text-sm font-medium text-red-800">Error loading proposal</h3>
-          <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+          <h3 class="text-sm font-medium text-red-800 dark:text-red-300">Error loading proposal</h3>
+          <p class="mt-1 text-sm text-red-700 dark:text-red-400">{{ error }}</p>
           <button
             @click="fetchProposal"
-            class="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+            class="mt-3 text-sm font-medium text-red-800 dark:text-red-300 hover:text-red-900 dark:hover:text-red-200 underline"
           >
             Try again
           </button>
@@ -21,9 +21,9 @@
       </div>
     </div>
     <div v-else-if="proposal">
-      <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+      <div class="bg-white/95 dark:bg-ocean-800/95 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100 dark:border-ocean-700">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 sm:gap-0 mb-4">
-          <h1 class="text-2xl sm:text-3xl font-bold flex-1 pr-2">{{ proposal.title }}</h1>
+          <h1 class="text-2xl sm:text-3xl font-bold flex-1 pr-2 text-gray-800 dark:text-ocean-100">{{ proposal.title }}</h1>
           <span
             :class="statusClasses"
             class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium shrink-0"
@@ -32,8 +32,8 @@
           </span>
         </div>
         <div class="mb-3 sm:mb-4">
-          <p class="text-gray-600 text-sm sm:text-base">By {{ proposal.user?.name }}</p>
-          <p class="text-xs sm:text-sm text-gray-500">
+          <p class="text-gray-600 dark:text-ocean-300 text-sm sm:text-base">By {{ proposal.user?.name }}</p>
+          <p class="text-xs sm:text-sm text-gray-500 dark:text-ocean-400">
             {{ formatDate(proposal.created_at) }}
           </p>
         </div>
@@ -41,41 +41,41 @@
           <span
             v-for="tag in proposal.tags"
             :key="tag.id"
-            class="bg-blue-100 text-blue-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm"
+            class="bg-blue-100 dark:bg-ocean-700 text-blue-800 dark:text-ocean-200 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm"
           >
             {{ tag.name }}
           </span>
         </div>
         <div class="mb-3 sm:mb-4">
-          <h2 class="text-lg sm:text-xl font-semibold mb-2">Description</h2>
-          <p class="text-gray-700 whitespace-pre-wrap text-sm sm:text-base">{{ proposal.description }}</p>
+          <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-ocean-100">Description</h2>
+          <p class="text-gray-700 dark:text-ocean-200 whitespace-pre-wrap text-sm sm:text-base">{{ proposal.description }}</p>
         </div>
         <div v-if="proposal.file_path" class="mb-4">
           <button
             @click="downloadFile"
-            class="text-blue-600 hover:text-blue-800 underline bg-transparent border-none cursor-pointer p-0 text-left"
+            class="text-blue-600 dark:text-ocean-400 hover:text-blue-800 dark:hover:text-ocean-300 underline bg-transparent border-none cursor-pointer p-0 text-left"
           >
             Download PDF
           </button>
-          <div v-if="downloadError" class="mt-2 text-sm text-red-600">
+          <div v-if="downloadError" class="mt-2 text-sm text-red-600 dark:text-red-400">
             {{ downloadError }}
           </div>
         </div>
         <div v-if="authStore.isAdmin" class="mt-3 sm:mt-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
             Change Status
           </label>
           <select
             v-model="status"
             @change="updateStatus"
-            class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-            :class="{ 'border-red-300 focus:ring-red-500': statusError }"
+            class="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
+            :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': statusError }"
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
-          <div v-if="statusError" class="mt-1 text-sm text-red-600">
+          <div v-if="statusError" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ statusError }}
           </div>
         </div>
@@ -89,7 +89,63 @@
         />
       </div>
 
-      <ReviewList :reviews="reviews" />
+      <ReviewList :reviews="reviews" @edit="handleEditReview" />
+      
+      <!-- Edit Review Modal -->
+      <div v-if="editingReview" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" @click.self="cancelEditReview">
+        <div class="bg-white dark:bg-ocean-800 rounded-xl shadow-xl p-6 sm:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-ocean-100">Edit Review</h3>
+          <form @submit.prevent="handleUpdateReview" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
+                Rating * <span class="text-gray-500 dark:text-ocean-400 text-xs">(1-5 or 10)</span>
+              </label>
+              <select
+                v-model="editReviewForm.rating"
+                required
+                class="w-full px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
+              >
+                <option value="">Select rating</option>
+                <option value="1">1 - Poor</option>
+                <option value="2">2 - Fair</option>
+                <option value="3">3 - Good</option>
+                <option value="4">4 - Very Good</option>
+                <option value="5">5 - Excellent</option>
+                <option value="10">10 - Outstanding</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
+                Comment
+              </label>
+              <textarea
+                v-model="editReviewForm.comment"
+                rows="4"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 resize-y"
+              ></textarea>
+            </div>
+            <div v-if="editReviewError" class="text-red-600 dark:text-red-400 text-sm">
+              {{ editReviewError }}
+            </div>
+            <div class="flex gap-3">
+              <button
+                type="submit"
+                :disabled="editReviewLoading"
+                class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 dark:from-ocean-500 dark:to-ocean-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 dark:hover:from-ocean-600 dark:hover:to-ocean-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 text-sm font-medium disabled:opacity-50"
+              >
+                {{ editReviewLoading ? 'Updating...' : 'Update Review' }}
+              </button>
+              <button
+                type="button"
+                @click="cancelEditReview"
+                class="flex-1 bg-gray-300 dark:bg-ocean-700 text-gray-700 dark:text-ocean-200 px-4 py-2 rounded-lg hover:bg-gray-400 dark:hover:bg-ocean-600 transition-all text-sm font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -114,13 +170,20 @@ const status = ref('')
 const error = ref('')
 const downloadError = ref('')
 const statusError = ref('')
+const editingReview = ref(null)
+const editReviewForm = ref({
+  rating: '',
+  comment: '',
+})
+const editReviewLoading = ref(false)
+const editReviewError = ref('')
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
   const s = proposal.value.status
-  if (s === 'approved') return 'bg-green-100 text-green-800'
-  if (s === 'rejected') return 'bg-red-100 text-red-800'
-  return 'bg-yellow-100 text-yellow-800'
+  if (s === 'approved') return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+  if (s === 'rejected') return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
 })
 
 const fetchProposal = async () => {
@@ -296,6 +359,58 @@ const downloadFile = async () => {
     
     downloadError.value = errorMessage
     // Toast will be shown automatically by axios interceptor for non-blob errors
+  }
+}
+
+const handleEditReview = (review) => {
+  editingReview.value = review
+  editReviewForm.value = {
+    rating: review.rating.toString(),
+    comment: review.comment || '',
+  }
+  editReviewError.value = ''
+}
+
+const cancelEditReview = () => {
+  editingReview.value = null
+  editReviewForm.value = {
+    rating: '',
+    comment: '',
+  }
+  editReviewError.value = ''
+}
+
+const handleUpdateReview = async () => {
+  if (!editingReview.value) return
+  
+  editReviewLoading.value = true
+  editReviewError.value = ''
+  
+  try {
+    await reviewsApi.update(
+      route.params.id,
+      editingReview.value.id,
+      {
+        rating: parseInt(editReviewForm.value.rating),
+        comment: editReviewForm.value.comment,
+      }
+    )
+    await fetchReviews()
+    cancelEditReview()
+  } catch (err) {
+    if (err.response?.data?.errors) {
+      const errors = err.response.data.errors
+      const firstErrorKey = Object.keys(errors)[0]
+      editReviewError.value = Array.isArray(errors[firstErrorKey])
+        ? errors[firstErrorKey][0]
+        : errors[firstErrorKey]
+    } else if (err.response?.data?.message) {
+      editReviewError.value = err.response.data.message
+    } else {
+      editReviewError.value = 'Failed to update review. Please try again.'
+    }
+  } finally {
+    editReviewLoading.value = false
   }
 }
 

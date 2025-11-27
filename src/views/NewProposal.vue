@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-3xl mx-auto px-4 sm:px-0">
-    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Submit New Proposal</h1>
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">Submit New Proposal</h1>
     <ProposalForm
       :loading="loading"
       :errors="errors"
