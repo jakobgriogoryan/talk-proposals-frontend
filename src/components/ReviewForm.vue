@@ -4,12 +4,13 @@
     <form @submit.prevent="handleSubmit" class="space-y-3 sm:space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-          Rating *
+          Rating * <span class="text-gray-500 text-xs">(1-5 or 10)</span>
         </label>
         <select
           v-model="form.rating"
           required
           class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          :class="{ 'border-red-300 focus:ring-red-500': errors.rating }"
         >
           <option value="">Select rating</option>
           <option value="1">1 - Poor</option>
@@ -17,7 +18,9 @@
           <option value="3">3 - Good</option>
           <option value="4">4 - Very Good</option>
           <option value="5">5 - Excellent</option>
+          <option value="10">10 - Outstanding</option>
         </select>
+        <p class="text-xs text-gray-500 mt-1">Select a rating from 1 to 5, or 10 for outstanding proposals.</p>
         <div v-if="errors.rating" class="text-red-500 text-sm mt-1">
           {{ errors.rating }}
         </div>

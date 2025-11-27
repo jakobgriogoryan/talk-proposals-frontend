@@ -18,7 +18,7 @@
           </div>
         </div>
         <div class="text-base sm:text-lg font-semibold shrink-0">
-          {{ review.rating }}/5
+          {{ review.rating }}{{ review.rating === 10 ? '' : '/5' }}
         </div>
       </div>
       <p v-if="review.comment" class="text-gray-700 mt-2 text-sm sm:text-base">
@@ -37,6 +37,7 @@ const props = defineProps({
 })
 
 const getRatingColor = (rating) => {
+  if (rating === 10) return 'border-purple-500'
   if (rating >= 4) return 'border-green-500'
   if (rating >= 3) return 'border-yellow-500'
   return 'border-red-500'
