@@ -13,6 +13,7 @@ import { onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { useRealtime } from './composables/useRealtime'
+import { authApi } from './api/auth'
 import Navigation from './components/Navigation.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
@@ -22,6 +23,13 @@ const { initialize, disconnect } = useRealtime()
 
 // Initialize auth on app mount, but don't block if it fails
 onMounted(async () => {
+  // Fetch CSRF cookie on app initialization for Sanctum SPA
+  try {
+    await authApi.getCsrfCookie()
+  } catch (error) {
+    // Silently fail - CSRF cookie fetch is best effort
+  }
+  
   if (!authStore.user && !authStore.initializing) {
     try {
       await authStore.fetchUser()
