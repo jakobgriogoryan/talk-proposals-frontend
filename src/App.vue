@@ -4,6 +4,7 @@
     <main class="container mx-auto px-4 py-8">
       <router-view />
     </main>
+    <ToastContainer />
   </div>
 </template>
 
@@ -11,6 +12,7 @@
 import { onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import Navigation from './components/Navigation.vue'
+import ToastContainer from './components/ToastContainer.vue'
 
 const authStore = useAuthStore()
 

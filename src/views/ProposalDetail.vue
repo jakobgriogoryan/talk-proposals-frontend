@@ -97,7 +97,9 @@ const statusClasses = computed(() => {
 const fetchProposal = async () => {
   try {
     const response = await proposalsApi.getOne(route.params.id)
-    proposal.value = response.data.proposal
+    // Handle new ApiResponse format: { status, message, data: { proposal } }
+    const data = response.data.data || response.data
+    proposal.value = data.proposal
     status.value = proposal.value.status
     await fetchReviews()
   } catch (error) {
@@ -110,7 +112,9 @@ const fetchProposal = async () => {
 const fetchReviews = async () => {
   try {
     const response = await reviewsApi.getForProposal(route.params.id)
-    reviews.value = response.data.reviews
+    // Handle new ApiResponse format: { status, message, data: { reviews } }
+    const data = response.data.data || response.data
+    reviews.value = data.reviews
   } catch (error) {
     console.error('Error fetching reviews:', error)
   }
@@ -125,9 +129,8 @@ const handleReviewSubmit = async (reviewData) => {
   } catch (error) {
     if (error.response?.data?.errors) {
       reviewErrors.value = error.response.data.errors
-    } else {
-      alert(error.response?.data?.message || 'Failed to submit review')
     }
+    // Toast will be shown automatically by axios interceptor
   } finally {
     reviewLoading.value = false
   }
@@ -135,10 +138,13 @@ const handleReviewSubmit = async (reviewData) => {
 
 const updateStatus = async () => {
   try {
-    await proposalsApi.updateStatus(route.params.id, status.value)
+    const response = await proposalsApi.updateStatus(route.params.id, status.value)
+    // Handle new ApiResponse format: { status, message, data: { proposal } }
+    const data = response.data.data || response.data
+    proposal.value = data.proposal || proposal.value
     proposal.value.status = status.value
   } catch (error) {
-    alert(error.response?.data?.message || 'Failed to update status')
+    // Toast will be shown automatically by axios interceptor
     status.value = proposal.value.status
   }
 }

@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -61,13 +61,52 @@ const form = ref({
 const error = ref('')
 const loading = ref(false)
 
+// Redirect if already authenticated
+onMounted(async () => {
+  // Fetch user if not loaded
+  if (!authStore.user && !authStore.initializing) {
+    try {
+      await authStore.fetchUser()
+    } catch (error) {
+      // User not authenticated, stay on login page
+    }
+  }
+
+  // If authenticated, redirect to appropriate homepage
+  if (authStore.isAuthenticated) {
+    if (authStore.isAdmin) {
+      router.push('/admin/proposals')
+    } else if (authStore.isReviewer) {
+      router.push('/review/proposals')
+    } else if (authStore.isSpeaker) {
+      router.push('/proposals')
+    } else {
+      router.push('/proposals')
+    }
+  }
+})
+
 const handleLogin = async () => {
   error.value = ''
   loading.value = true
   try {
     await authStore.login(form.value)
-    const redirect = route.query.redirect || '/proposals'
-    router.push(redirect)
+    
+    // Redirect to query redirect if provided, otherwise to role-based homepage
+    if (route.query.redirect) {
+      router.push(route.query.redirect)
+    } else {
+      // Redirect based on user role
+      if (authStore.isAdmin) {
+        router.push('/admin/proposals')
+      } else if (authStore.isReviewer) {
+        router.push('/review/proposals')
+      } else if (authStore.isSpeaker) {
+        router.push('/proposals')
+      } else {
+        router.push('/proposals')
+      }
+    }
   } catch (err) {
     error.value = err.response?.data?.message || 'Login failed'
   } finally {

@@ -115,10 +115,11 @@ const fetchProposals = async (page = 1) => {
       }
     })
 
-    console.log(params, 'admin params')
     const response = await proposalsApi.getAllForAdmin(params)
-    proposals.value = response.data.proposals
-    pagination.value = response.data.pagination
+    // Handle new ApiResponse format: { status, message, data: { proposals, pagination } }
+    const data = response.data.data || response.data
+    proposals.value = data.proposals
+    pagination.value = data.pagination
   } catch (error) {
     console.error('Error fetching proposals:', error)
   } finally {
@@ -129,7 +130,9 @@ const fetchProposals = async (page = 1) => {
 const fetchTags = async () => {
   try {
     const response = await tagsApi.getAll()
-    tags.value = response.data.tags
+    // Handle new ApiResponse format: { status, message, data: { tags } }
+    const data = response.data.data || response.data
+    tags.value = data.tags
   } catch (error) {
     console.error('Error fetching tags:', error)
   }
@@ -146,13 +149,17 @@ const goToPage = (page) => {
 
 const updateStatus = async (id, status) => {
   try {
-    await proposalsApi.updateStatus(id, status)
+    const response = await proposalsApi.updateStatus(id, status)
+    // Handle new ApiResponse format: { status, message, data: { proposal } }
+    const data = response.data.data || response.data
     const proposal = proposals.value.find(p => p.id === id)
-    if (proposal) {
+    if (proposal && data.proposal) {
+      Object.assign(proposal, data.proposal)
+    } else if (proposal) {
       proposal.status = status
     }
   } catch (error) {
-    alert(error.response?.data?.message || 'Failed to update status')
+    // Toast will be shown automatically by axios interceptor
   }
 }
 

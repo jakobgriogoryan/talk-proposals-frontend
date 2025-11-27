@@ -28,7 +28,9 @@ const errors = ref({})
 const fetchProposal = async () => {
   try {
     const response = await proposalsApi.getOne(route.params.id)
-    proposal.value = response.data.proposal
+    // Handle new ApiResponse format: { status, message, data: { proposal } }
+    const data = response.data.data || response.data
+    proposal.value = data.proposal
   } catch (error) {
     console.error('Error fetching proposal:', error)
     router.push('/proposals')
@@ -46,9 +48,8 @@ const handleSubmit = async (formData) => {
   } catch (error) {
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors
-    } else {
-      alert(error.response?.data?.message || 'Failed to update proposal')
     }
+    // Toast will be shown automatically by axios interceptor
   } finally {
     saving.value = false
   }

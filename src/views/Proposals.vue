@@ -88,8 +88,10 @@ const fetchProposals = async (page = 1) => {
     })
 
     const response = await proposalsApi.getAll(params)
-    proposals.value = response.data.proposals
-    pagination.value = response.data.pagination
+    // Handle new ApiResponse format: { status, message, data: { proposals, pagination } }
+    const data = response.data.data || response.data
+    proposals.value = data.proposals
+    pagination.value = data.pagination
   } catch (error) {
     console.error('Error fetching proposals:', error)
   } finally {
@@ -100,7 +102,9 @@ const fetchProposals = async (page = 1) => {
 const fetchTags = async () => {
   try {
     const response = await tagsApi.getAll()
-    tags.value = response.data.tags
+    // Handle new ApiResponse format: { status, message, data: { tags } }
+    const data = response.data.data || response.data
+    tags.value = data.tags
   } catch (error) {
     console.error('Error fetching tags:', error)
   }
@@ -122,7 +126,7 @@ const handleDelete = async (id) => {
       fetchProposals(pagination.value?.current_page || 1)
     } catch (error) {
       console.error('Error deleting proposal:', error)
-      alert('Failed to delete proposal')
+      // Toast will be shown automatically by axios interceptor
     }
   }
 }

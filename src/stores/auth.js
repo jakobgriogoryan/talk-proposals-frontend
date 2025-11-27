@@ -20,7 +20,8 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const response = await authApi.login(credentials)
-        this.user = response.data.user
+        // Handle new ApiResponse format: { status, message, data: { user } }
+        this.user = response.data.data?.user || response.data.user
         return response.data
       } finally {
         this.loading = false
@@ -31,7 +32,8 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const response = await authApi.register(data)
-        this.user = response.data.user
+        // Handle new ApiResponse format: { status, message, data: { user } }
+        this.user = response.data.data?.user || response.data.user
         return response.data
       } finally {
         this.loading = false
@@ -59,8 +61,9 @@ export const useAuthStore = defineStore('auth', {
       this.initializing = true
       try {
         const response = await authApi.getUser()
-        this.user = response.data.user
-        return response.data.user
+        // Handle new ApiResponse format: { status, message, data: { user } }
+        this.user = response.data.data?.user || response.data.user
+        return this.user
       } catch (error) {
         // Only clear user if it's actually an auth error
         if (error.response?.status === 401) {

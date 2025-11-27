@@ -28,9 +28,8 @@ const handleSubmit = async (formData) => {
   } catch (error) {
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors
-    } else {
-      alert(error.response?.data?.message || 'Failed to create proposal')
     }
+    // Toast will be shown automatically by axios interceptor
   } finally {
     loading.value = false
   }

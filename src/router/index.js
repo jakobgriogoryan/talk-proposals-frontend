@@ -62,9 +62,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Only fetch user if not already loaded and route is not a guest route
-  // This prevents redirect loops when accessing login/register
-  if (!to.meta.guest && !authStore.user && !authStore.initializing) {
+  // Always fetch user if not loaded (even for guest routes) to check authentication status
+  if (!authStore.user && !authStore.initializing) {
     try {
       await authStore.fetchUser()
     } catch (error) {
@@ -73,18 +72,18 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
+  // Check if route is for guests only - redirect authenticated users to homepage
+  if (to.meta.guest && authStore.isAuthenticated) {
+    // Redirect authenticated users away from login/register to their homepage
+    if (authStore.isAdmin) return next({ name: 'AdminProposals' })
+    if (authStore.isReviewer) return next({ name: 'ReviewProposals' })
+    if (authStore.isSpeaker) return next({ name: 'Proposals' })
+    return next({ name: 'Proposals' })
+  }
+
   // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next({ name: 'Login', query: { redirect: to.fullPath } })
-  }
-
-  // Check if route is for guests only
-  if (to.meta.guest && authStore.isAuthenticated) {
-    // Redirect authenticated users away from login/register
-    if (authStore.isSpeaker) return next({ name: 'Proposals' })
-    if (authStore.isReviewer) return next({ name: 'ReviewProposals' })
-    if (authStore.isAdmin) return next({ name: 'AdminProposals' })
-    return next({ name: 'Proposals' })
   }
 
   // Check role-based access
