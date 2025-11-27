@@ -1,35 +1,35 @@
 <template>
   <div class="max-w-4xl mx-auto">
-    <div v-if="loading" class="text-center py-8">Loading...</div>
+    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
     <div v-else-if="proposal">
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="flex justify-between items-start mb-4">
-          <h1 class="text-3xl font-bold">{{ proposal.title }}</h1>
+      <div class="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-4 sm:mb-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 sm:gap-0 mb-4">
+          <h1 class="text-2xl sm:text-3xl font-bold flex-1 pr-2">{{ proposal.title }}</h1>
           <span
             :class="statusClasses"
-            class="px-4 py-2 rounded-full text-sm font-medium"
+            class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium shrink-0"
           >
             {{ proposal.status }}
           </span>
         </div>
-        <div class="mb-4">
-          <p class="text-gray-600">By {{ proposal.user?.name }}</p>
-          <p class="text-sm text-gray-500">
+        <div class="mb-3 sm:mb-4">
+          <p class="text-gray-600 text-sm sm:text-base">By {{ proposal.user?.name }}</p>
+          <p class="text-xs sm:text-sm text-gray-500">
             {{ formatDate(proposal.created_at) }}
           </p>
         </div>
-        <div class="flex flex-wrap gap-2 mb-4">
+        <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
           <span
             v-for="tag in proposal.tags"
             :key="tag.id"
-            class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+            class="bg-blue-100 text-blue-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm"
           >
             {{ tag.name }}
           </span>
         </div>
-        <div class="mb-4">
-          <h2 class="text-xl font-semibold mb-2">Description</h2>
-          <p class="text-gray-700 whitespace-pre-wrap">{{ proposal.description }}</p>
+        <div class="mb-3 sm:mb-4">
+          <h2 class="text-lg sm:text-xl font-semibold mb-2">Description</h2>
+          <p class="text-gray-700 whitespace-pre-wrap text-sm sm:text-base">{{ proposal.description }}</p>
         </div>
         <div v-if="proposal.file_path" class="mb-4">
           <a
@@ -40,14 +40,14 @@
             Download PDF
           </a>
         </div>
-        <div v-if="authStore.isAdmin" class="mt-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">
+        <div v-if="authStore.isAdmin" class="mt-3 sm:mt-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
             Change Status
           </label>
           <select
             v-model="status"
             @change="updateStatus"
-            class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>

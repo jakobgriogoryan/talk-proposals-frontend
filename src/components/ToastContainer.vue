@@ -1,6 +1,6 @@
 <template>
   <div
-    class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full"
+    class="fixed top-4 right-4 sm:right-6 z-50 flex flex-col gap-2 max-w-xs sm:max-w-md w-[calc(100%-2rem)] sm:w-auto"
     aria-live="polite"
     aria-atomic="true"
   >
@@ -13,7 +13,7 @@
         v-for="notification in notifications"
         :key="notification.id"
         :class="[
-          'px-4 py-3 rounded-lg shadow-lg flex items-center justify-between gap-4 min-w-[300px]',
+          'px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-lg flex items-center justify-between gap-2 sm:gap-4 w-full',
           getToastClass(notification.type),
         ]"
         role="alert"
@@ -47,7 +47,7 @@
               d="M6 18L18 6M6 6l12 12"
             />
           </svg>
-          <p class="text-sm font-medium text-white flex-1">
+          <p class="text-xs sm:text-sm font-medium text-white flex-1 break-words">
             {{ notification.message }}
           </p>
         </div>

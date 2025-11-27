@@ -1,14 +1,14 @@
 <template>
-  <form @submit.prevent="handleSubmit" class="space-y-6">
+  <form @submit.prevent="handleSubmit" class="space-y-4 sm:space-y-6">
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
         Title *
       </label>
       <input
         v-model="form.title"
         type="text"
         required
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
       />
       <div v-if="errors.title" class="text-red-500 text-sm mt-1">
         {{ errors.title }}
@@ -16,14 +16,14 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
         Description *
       </label>
       <textarea
         v-model="form.description"
         rows="6"
         required
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base resize-y"
       ></textarea>
       <div v-if="errors.description" class="text-red-500 text-sm mt-1">
         {{ errors.description }}
@@ -31,7 +31,7 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
         PDF File {{ isEdit ? '(optional)' : '*' }}
       </label>
       <input
@@ -39,7 +39,7 @@
         accept=".pdf"
         @change="handleFileChange"
         :required="!isEdit"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
       <div v-if="errors.file" class="text-red-500 text-sm mt-1">
         {{ errors.file }}
@@ -50,20 +50,21 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
         Tags * (type and press Enter)
       </label>
-      <div class="flex flex-wrap gap-2 mb-2">
+      <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
         <span
           v-for="(tag, index) in form.tags"
           :key="index"
-          class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center"
+          class="bg-blue-100 text-blue-800 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm flex items-center"
         >
           {{ tag }}
           <button
             type="button"
             @click="removeTag(index)"
-            class="ml-2 text-blue-600 hover:text-blue-800"
+            class="ml-1.5 sm:ml-2 text-blue-600 hover:text-blue-800 text-base sm:text-lg leading-none"
+            aria-label="Remove tag"
           >
             ×
           </button>
@@ -74,24 +75,24 @@
         type="text"
         @keydown.enter.prevent="addTag"
         placeholder="Type tag name and press Enter"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
       />
       <div v-if="errors.tags" class="text-red-500 text-sm mt-1">
         {{ errors.tags }}
       </div>
     </div>
 
-    <div class="flex space-x-4">
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:space-x-4">
       <button
         type="submit"
         :disabled="loading"
-        class="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50"
+        class="w-full sm:w-auto bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors text-sm sm:text-base"
       >
         {{ loading ? 'Saving...' : (isEdit ? 'Update' : 'Submit') }}
       </button>
       <router-link
         to="/proposals"
-        class="bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400"
+        class="w-full sm:w-auto bg-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors text-center text-sm sm:text-base"
       >
         Cancel
       </router-link>

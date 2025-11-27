@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-3xl font-bold mb-6">Admin Dashboard</h1>
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Admin Dashboard</h1>
 
     <ProposalFilters
       :filters="filters"
@@ -9,21 +9,21 @@
       @update:filters="updateFilters"
     />
 
-    <div v-if="loading" class="text-center py-8">Loading...</div>
-    <div v-else-if="proposals.length === 0" class="text-center py-8 text-gray-500">
-      No proposals found.
+    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+    <div v-else-if="proposals.length === 0" class="text-center py-8 sm:py-12 text-gray-500">
+      <p class="text-base sm:text-lg">No proposals found.</p>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       <div
         v-for="proposal in proposals"
         :key="proposal.id"
-        class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+        class="bg-white rounded-lg shadow-md p-4 sm:p-6 hover:shadow-lg transition-shadow"
       >
-        <div class="flex justify-between items-start mb-4">
-          <h3 class="text-xl font-semibold text-gray-800">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 sm:gap-0 mb-3 sm:mb-4">
+          <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex-1">
             <router-link
               :to="`/proposals/${proposal.id}`"
-              class="hover:text-blue-600"
+              class="hover:text-blue-600 transition-colors line-clamp-2"
             >
               {{ proposal.title }}
             </router-link>
@@ -31,7 +31,7 @@
           <select
             :value="proposal.status"
             @change="updateStatus(proposal.id, $event.target.value)"
-            class="px-3 py-1 rounded-full text-sm font-medium border"
+            class="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium border shrink-0"
             :class="getStatusClass(proposal.status)"
           >
             <option value="pending">Pending</option>
@@ -39,33 +39,33 @@
             <option value="rejected">Rejected</option>
           </select>
         </div>
-        <p class="text-gray-600 mb-4 line-clamp-3">
+        <p class="text-gray-600 mb-3 sm:mb-4 line-clamp-3 text-sm sm:text-base">
           {{ proposal.description }}
         </p>
-        <div class="flex items-center justify-between">
-          <div class="flex flex-wrap gap-2">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+          <div class="flex flex-wrap gap-1.5 sm:gap-2">
             <span
               v-for="tag in proposal.tags"
               :key="tag.id"
-              class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
+              class="bg-blue-100 text-blue-800 px-2 py-0.5 sm:py-1 rounded text-xs"
             >
               {{ tag.name }}
             </span>
           </div>
-          <div class="text-sm text-gray-500">
+          <div class="text-xs sm:text-sm text-gray-500">
             By {{ proposal.user?.name }}
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6 flex justify-center">
+    <div v-if="pagination && pagination.last_page > 1" class="mt-6 flex flex-wrap justify-center gap-2">
       <button
         v-for="page in pagination.last_page"
         :key="page"
         @click="goToPage(page)"
         :class="[
-          'px-4 py-2 mx-1 rounded',
+          'px-3 sm:px-4 py-2 rounded text-sm sm:text-base transition-colors',
           page === pagination.current_page
             ? 'bg-blue-500 text-white'
             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

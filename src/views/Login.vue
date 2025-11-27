@@ -1,7 +1,7 @@
 <template>
-  <div class="max-w-md mx-auto mt-16">
-    <div class="bg-white shadow-md rounded-lg p-8">
-      <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+  <div class="max-w-md mx-auto mt-8 sm:mt-12 lg:mt-16 px-4">
+    <div class="bg-white shadow-md rounded-lg p-6 sm:p-8">
+      <h1 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">Login</h1>
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">

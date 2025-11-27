@@ -1,7 +1,7 @@
 <template>
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">Edit Proposal</h1>
-    <div v-if="loading" class="text-center py-8">Loading...</div>
+  <div class="max-w-3xl mx-auto px-4 sm:px-0">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Edit Proposal</h1>
+    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
     <ProposalForm
       v-else
       :proposal="proposal"

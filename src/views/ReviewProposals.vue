@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-3xl font-bold mb-6">Proposals for Review</h1>
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Proposals for Review</h1>
 
     <ProposalFilters
       :filters="filters"
@@ -9,11 +9,11 @@
       @update:filters="updateFilters"
     />
 
-    <div v-if="loading" class="text-center py-8">Loading...</div>
-    <div v-else-if="proposals.length === 0" class="text-center py-8 text-gray-500">
-      No proposals found.
+    <div v-if="loading" class="text-center py-8 text-gray-500">Loading...</div>
+    <div v-else-if="proposals.length === 0" class="text-center py-8 sm:py-12 text-gray-500">
+      <p class="text-base sm:text-lg">No proposals found.</p>
     </div>
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       <div
         v-for="proposal in proposals"
         :key="proposal.id"
@@ -26,13 +26,13 @@
       </div>
     </div>
 
-    <div v-if="pagination && pagination.last_page > 1" class="mt-6 flex justify-center">
+    <div v-if="pagination && pagination.last_page > 1" class="mt-6 flex flex-wrap justify-center gap-2">
       <button
         v-for="page in pagination.last_page"
         :key="page"
         @click="goToPage(page)"
         :class="[
-          'px-4 py-2 mx-1 rounded',
+          'px-3 sm:px-4 py-2 rounded text-sm sm:text-base transition-colors',
           page === pagination.current_page
             ? 'bg-blue-500 text-white'
             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
