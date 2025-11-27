@@ -56,7 +56,7 @@
           <button
             v-if="authStore.isAuthenticated"
             @click="handleLogout"
-            class="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 text-sm font-medium"
+            class="bg-gradient-to-r from-red-400 to-red-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-red-500 hover:to-red-600 transition-all shadow-md hover:shadow-lg transform hover:scale-105 text-sm font-medium"
           >
             Logout
           </button>
@@ -141,7 +141,7 @@
             </button>
             <button
               @click="handleLogout"
-              class="w-full text-left px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              class="w-full text-left px-4 py-2 bg-red-400 text-white rounded-md hover:bg-red-500 transition-colors"
             >
               Logout
             </button>
