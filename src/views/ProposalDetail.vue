@@ -152,9 +152,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useNotificationsStore } from '../stores/notifications'
+import { useRealtime } from '../composables/useRealtime'
 import { proposalsApi, reviewsApi } from '../api'
 import api from '../api/axios'
 import ReviewForm from '../components/ReviewForm.vue'
@@ -162,6 +164,7 @@ import ReviewList from '../components/ReviewList.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationsStore = useNotificationsStore()
 const proposal = ref(null)
 const reviews = ref([])
 const loading = ref(true)
@@ -179,6 +182,7 @@ const editReviewForm = ref({
 const editReviewLoading = ref(false)
 const editReviewError = ref('')
 const ratingOptions = ref([])
+const { listenToProposal } = useRealtime()
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -435,9 +439,59 @@ const fetchRatingOptions = async () => {
   }
 }
 
+// Handle status changes from global events
+const handleStatusChanged = (event) => {
+  const data = event.detail
+  if (proposal.value && (proposal.value.id === data.proposal_id || proposal.value.id === data.proposal?.id)) {
+    // Update the entire proposal object with the new data
+    if (data.proposal) {
+      proposal.value = {
+        ...proposal.value,
+        ...data.proposal,
+        status: data.new_status,
+      }
+    } else {
+      proposal.value.status = data.new_status
+    }
+    status.value = data.new_status
+  }
+}
+
 onMounted(() => {
   fetchProposal()
   fetchRatingOptions()
+  
+  // Listen to real-time events for this specific proposal
+  if (route.params.id) {
+    listenToProposal(route.params.id, {
+      onReviewed: () => {
+        // Refresh reviews when a new review is added
+        fetchReviews()
+      },
+      onStatusChanged: (data) => {
+        // Update proposal with full resource from event
+        if (proposal.value && proposal.value.id === data.proposal_id) {
+          // Update the entire proposal object with the new data
+          proposal.value = {
+            ...proposal.value,
+            ...data.proposal,
+            status: data.new_status,
+          }
+          status.value = data.new_status
+          
+          // Show notification
+          notificationsStore.push(data.message, 'info', 5000)
+        }
+      },
+    })
+  }
+  
+  // Also listen to global events for status changes
+  window.addEventListener('proposal-status-changed', handleStatusChanged)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('proposal-status-changed', handleStatusChanged)
 })
 </script>
 

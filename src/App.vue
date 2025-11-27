@@ -9,14 +9,16 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
+import { useRealtime } from './composables/useRealtime'
 import Navigation from './components/Navigation.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
+const { initialize, disconnect } = useRealtime()
 
 // Initialize auth on app mount, but don't block if it fails
 onMounted(async () => {
@@ -27,5 +29,22 @@ onMounted(async () => {
       // Silently fail - user is not authenticated
     }
   }
+})
+
+// Initialize real-time when user is authenticated
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    // Small delay to ensure auth is fully set up
+    setTimeout(() => {
+      initialize()
+    }, 500)
+  } else {
+    disconnect()
+  }
+}, { immediate: true })
+
+// Cleanup on unmount
+onUnmounted(() => {
+  disconnect()
 })
 </script>

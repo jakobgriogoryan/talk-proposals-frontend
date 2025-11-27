@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { proposalsApi, tagsApi } from '../api'
 import ProposalCard from '../components/ProposalCard.vue'
 import ProposalFilters from '../components/ProposalFilters.vue'
@@ -67,6 +67,29 @@ const filters = ref({
   status: '',
 })
 const pagination = ref(null)
+
+// Real-time event handlers
+const handleProposalSubmitted = (event) => {
+  // Refresh proposals list when a new proposal is submitted
+  fetchProposals(pagination.value?.current_page || 1)
+}
+
+const handleProposalStatusChanged = (event) => {
+  // Update proposal status in the list if it exists
+  const data = event.detail
+  const proposalIndex = proposals.value.findIndex(p => p.id === data.proposal_id || p.id === data.proposal?.id)
+  if (proposalIndex !== -1 && data.proposal) {
+    // Update the entire proposal object with the new data from the event
+    proposals.value[proposalIndex] = {
+      ...proposals.value[proposalIndex],
+      ...data.proposal,
+      status: data.new_status,
+    }
+  } else {
+    // If not in current page, refresh to get updated list
+    fetchProposals(pagination.value?.current_page || 1)
+  }
+}
 
 const fetchProposals = async (page = 1) => {
   loading.value = true
@@ -138,6 +161,16 @@ const handleDelete = async (id) => {
 onMounted(() => {
   fetchProposals()
   fetchTags()
+  
+  // Listen to real-time events
+  window.addEventListener('proposal-submitted', handleProposalSubmitted)
+  window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
+})
+
+onUnmounted(() => {
+  // Clean up event listeners
+  window.removeEventListener('proposal-submitted', handleProposalSubmitted)
+  window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
 })
 </script>
 
