@@ -67,13 +67,26 @@ const pagination = ref(null)
 const fetchProposals = async (page = 1) => {
   loading.value = true
   try {
-    const params = {
+    const rawParams = {
       page,
       ...filters.value,
     }
-    if (params.tags.length > 0) {
-      params.tags = params.tags.join(',')
-    }
+
+    // Only send params that actually have a value
+    const params = {}
+    Object.entries(rawParams).forEach(([key, value]) => {
+      if (key === 'tags') {
+        if (Array.isArray(value) && value.length > 0) {
+          params.tags = value.join(',')
+        }
+        return
+      }
+
+      if (value !== '' && value !== null && value !== undefined) {
+        params[key] = value
+      }
+    })
+
     const response = await proposalsApi.getAll(params)
     proposals.value = response.data.proposals
     pagination.value = response.data.pagination
