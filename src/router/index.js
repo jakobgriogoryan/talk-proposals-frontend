@@ -62,14 +62,20 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Always fetch user if not loaded (even for guest routes) to check authentication status
+  // Wait for any ongoing initialization to complete (max 1 second)
+  if (authStore.initializing) {
+    let attempts = 0
+    while (authStore.initializing && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+      attempts++
+    }
+  }
+
+  // Only fetch user if not loaded and not initializing
   if (!authStore.user && !authStore.initializing) {
     try {
       await authStore.fetchUser()
-    } catch (error) {
-      // User not authenticated - silently fail, will be caught by requiresAuth check
-      // Don't redirect here to avoid loops
-    }
+    } catch (error) {}
   }
 
   // Check if route is for guests only - redirect authenticated users to homepage
@@ -82,8 +88,27 @@ router.beforeEach(async (to, from, next) => {
   }
 
   // Check if route requires authentication
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return next({ name: 'Login', query: { redirect: to.fullPath } })
+  if (to.meta.requiresAuth) {
+    if (authStore.initializing) {
+      let waitAttempts = 0
+      while (authStore.initializing && waitAttempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        waitAttempts++
+      }
+    }
+
+    // If not authenticated after initialization completes, redirect to login
+    if (!authStore.isAuthenticated) {
+      if (to.name === 'Login') {
+        return next()
+      }
+
+      const isPageRefresh = !from.name || from.name === to.name
+      const redirectQuery = !isPageRefresh && from.name !== 'Login'
+          ? { redirect: to.fullPath }
+          : {}
+      return next({ name: 'Login', query: redirectQuery })
+    }
   }
 
   // Check role-based access
@@ -104,6 +129,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
+  // Allow navigation to proceed
   next()
 })
 
