@@ -201,7 +201,6 @@ const fetchProposal = async () => {
       proposalsApi.getOne(route.params.id),
       reviewsApi.getForProposal(route.params.id).catch(err => {
         // If reviews fail, just log and continue
-        console.error('Error fetching reviews:', err)
         return { data: { data: { reviews: [] } } }
       })
     ])
@@ -215,7 +214,6 @@ const fetchProposal = async () => {
     const reviewsData = reviewsResponse.data.data || reviewsResponse.data
     reviews.value = reviewsData.reviews || []
   } catch (err) {
-    console.error('Error fetching proposal:', err)
     // Get user-friendly error message
     let errorMessage = 'Failed to load proposal. Please try again.'
     
@@ -246,9 +244,7 @@ const fetchReviews = async () => {
     // Handle new ApiResponse format: { status, message, data: { reviews } }
     const data = response.data.data || response.data
     reviews.value = data.reviews
-  } catch (error) {
-    console.error('Error fetching reviews:', error)
-  }
+  } catch (error) {}
 }
 
 const handleReviewSubmit = async (reviewData) => {
@@ -337,7 +333,6 @@ const downloadFile = async () => {
     link.remove()
     window.URL.revokeObjectURL(blobUrl)
   } catch (err) {
-    console.error('Error downloading file:', err)
     let errorMessage = 'Failed to download file. Please try again.'
     
     // Try to parse blob error response
@@ -426,7 +421,6 @@ const fetchRatingOptions = async () => {
     const data = response.data.data || response.data
     ratingOptions.value = data.ratings || []
   } catch (err) {
-    console.error('Error fetching rating options:', err)
     // Fallback to default options if API fails
     ratingOptions.value = [
       { value: 1, label: '1 - Poor' },

@@ -87,7 +87,6 @@ const fetchRatingOptions = async () => {
     const data = response.data.data || response.data
     ratingOptions.value = data.ratings || []
   } catch (err) {
-    console.error('Error fetching rating options:', err)
     // Fallback to default options if API fails
     ratingOptions.value = [
       { value: 1, label: '1 - Poor' },

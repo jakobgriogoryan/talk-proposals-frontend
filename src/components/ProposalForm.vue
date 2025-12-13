@@ -205,9 +205,7 @@ const fetchTags = async () => {
     const response = await tagsApi.getAll()
     const data = response.data.data || response.data
     allTags.value = data.tags || []
-  } catch (error) {
-    console.error('Error fetching tags:', error)
-  }
+  } catch (error) {}
 }
 
 const filterExistingTags = () => {

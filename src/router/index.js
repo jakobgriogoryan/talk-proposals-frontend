@@ -72,11 +72,14 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  // Only fetch user if not loaded and not initializing
-  if (!authStore.user && !authStore.initializing) {
+  // Only fetch user if not loaded, not initializing, and not on a guest-only route
+  // Guest routes don't need user data, so skip the API call to avoid unnecessary 401 errors
+  if (!authStore.user && !authStore.initializing && !to.meta.guest) {
     try {
       await authStore.fetchUser()
-    } catch (error) {}
+    } catch (error) {
+      // Silently handle errors - user is not authenticated
+    }
   }
 
   // Check if route is for guests only - redirect authenticated users to homepage

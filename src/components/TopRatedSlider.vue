@@ -170,9 +170,7 @@ const fetchTopRated = async () => {
       stopAutoSlide() // Stop any existing interval
       startAutoSlide() // Start fresh
     }
-  } catch (error) {
-    console.error('Error fetching top-rated proposals:', error)
-  }
+  } catch (error) {}
 }
 
 const nextSlide = () => {

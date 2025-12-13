@@ -108,13 +108,20 @@ export function useRealtime() {
   }
 
   /**
-   * Disconnect all channels
+   * Disconnect all channels and clean up resources
    */
   const disconnect = () => {
     channels.forEach(channel => {
-      channel.stopListening('.proposal.submitted')
-      channel.stopListening('.proposal.reviewed')
-      channel.stopListening('.proposal.status.changed')
+      try {
+        // Stop listening to all events
+        channel.stopListening('.proposal.submitted')
+        channel.stopListening('.proposal.reviewed')
+        channel.stopListening('.ProposalStatusChanged')
+        // Leave the channel to fully disconnect
+        channel.leave()
+      } catch (error) {
+        // Silently handle errors during cleanup
+      }
     })
     channels = []
   }

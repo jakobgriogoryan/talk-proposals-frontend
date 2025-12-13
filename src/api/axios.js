@@ -51,6 +51,8 @@ api.interceptors.response.use(
   async (error) => {
     const notificationsStore = useNotificationsStore()
 
+
+
     // Helper function to get user-friendly error messages
     const getUserFriendlyMessage = (error) => {
       // If API provides a message, use it
@@ -99,18 +101,20 @@ api.interceptors.response.use(
     const isUnauthorized = error.response?.status === 401
     const isNetworkError = !error.response
 
-    // Always show user-friendly messages for functional actions, 401, and network errors
-    if (isNetworkError || isUnauthorized || isFunctionalAction) {
-      const userMessage = getUserFriendlyMessage(error)
+    // Suppress console errors for expected 401s on user check endpoints
+    const url = error.config?.url || ''
+    const isUserCheck = url.includes('/user') || url.includes('/sanctum/csrf-cookie')
+    const isExpected401 = error.response?.status === 401 && isUserCheck
 
+    // Always show user-friendly messages for functional actions, 401, and network errors
+    // But skip expected 401s on user check endpoints (they're normal for unauthenticated users)
+    if (isNetworkError || (isUnauthorized && !isExpected401) || isFunctionalAction) {
+      const userMessage = getUserFriendlyMessage(error)
+      
       // For 401, only show message if it's not a user check endpoint
-      if (isUnauthorized) {
-        const url = error.config?.url || ''
-        const isUserCheck = url.includes('/user') || url.includes('/sanctum/csrf-cookie')
-        if (!isUserCheck) {
-          notificationsStore.push(userMessage, 'error')
-        }
-      } else {
+      if (isUnauthorized && !isExpected401) {
+        notificationsStore.push(userMessage, 'error')
+      } else if (!isUnauthorized) {
         notificationsStore.push(userMessage, 'error')
       }
     }
@@ -132,31 +136,41 @@ api.interceptors.response.use(
 
     // Handle 401 unauthorized - redirect to login
     if (error.response?.status === 401) {
-      const url = error.config?.url || ''
-      const isUserCheck = url.includes('/user') || url.includes('/sanctum/csrf-cookie')
-
-      if (!isUserCheck) {
-        // Clear user from store
-        try {
-          const authStore = useAuthStore()
-          if (authStore) {
-            authStore.user = null
-          }
-        } catch (e) {}
-
-        const currentPath = window.location.pathname
-        const isOnAuthPage = currentPath === '/login' || currentPath === '/register'
-
-        if (!isOnAuthPage) {
-          try {
-            setTimeout(() => {
-              const currentPathAfterDelay = window.location.pathname
-              if (currentPathAfterDelay !== '/login' && currentPathAfterDelay !== '/register') {
-                window.location.href = '/login'
-              }
-            }, 200)
-          } catch (e) {}
+      // For expected 401s on user check endpoints, return a resolved promise with proper axios response structure
+      // This prevents the error from being logged to console (they're normal for unauthenticated users)
+      if (isExpected401) {
+        // Return a proper axios response object to prevent error logging
+        return Promise.resolve({
+          data: null,
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: error.response?.headers || {},
+          config: error.config,
+          request: error.request,
+        })
+      }
+      
+      // For unexpected 401s, handle normally
+      // Clear user from store
+      try {
+        const authStore = useAuthStore()
+        if (authStore) {
+          authStore.user = null
         }
+      } catch (e) {}
+
+      const currentPath = window.location.pathname
+      const isOnAuthPage = currentPath === '/login' || currentPath === '/register'
+
+      if (!isOnAuthPage) {
+        try {
+          setTimeout(() => {
+            const currentPathAfterDelay = window.location.pathname
+            if (currentPathAfterDelay !== '/login' && currentPathAfterDelay !== '/register') {
+              window.location.href = '/login'
+            }
+          }, 200)
+        } catch (e) {}
       }
     }
 

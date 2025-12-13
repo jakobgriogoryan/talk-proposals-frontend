@@ -119,9 +119,7 @@ const fetchProposals = async (page = 1) => {
     const data = response.data.data || response.data
     proposals.value = data.proposals
     pagination.value = data.pagination
-  } catch (error) {
-    console.error('Error fetching proposals:', error)
-  } finally {
+  } catch (error) {} finally {
     loading.value = false
   }
 }
@@ -132,9 +130,7 @@ const fetchTags = async () => {
     // Handle new ApiResponse format: { status, message, data: { tags } }
     const data = response.data.data || response.data
     tags.value = data.tags
-  } catch (error) {
-    console.error('Error fetching tags:', error)
-  }
+  } catch (error) {}
 }
 
 const updateFilters = (newFilters) => {
@@ -151,10 +147,7 @@ const handleDelete = async (id) => {
     try {
       await proposalsApi.delete(id)
       fetchProposals(pagination.value?.current_page || 1)
-    } catch (error) {
-      console.error('Error deleting proposal:', error)
-      // Toast will be shown automatically by axios interceptor
-    }
+    } catch (error) {}
   }
 }
 

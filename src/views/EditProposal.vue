@@ -32,7 +32,6 @@ const fetchProposal = async () => {
     const data = response.data.data || response.data
     proposal.value = data.proposal
   } catch (error) {
-    console.error('Error fetching proposal:', error)
     router.push('/proposals')
   } finally {
     loading.value = false

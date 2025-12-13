@@ -61,12 +61,20 @@ export const useAuthStore = defineStore('auth', {
       this.initializing = true
       try {
         const response = await authApi.getUser()
+        
+        // Handle expected 401 response (user not authenticated)
+        if (response.status === 401 || !response.data) {
+          this.user = null
+          return null
+        }
+        
         this.user = extractUserFromResponse(response)
-
         return this.user
       } catch (error) {
+        // Handle unexpected errors
         if (error.response?.status === 401) {
           this.user = null
+          return null
         }
 
         throw error

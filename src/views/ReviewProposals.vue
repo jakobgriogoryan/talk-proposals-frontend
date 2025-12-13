@@ -118,9 +118,7 @@ const fetchProposals = async (page = 1) => {
     const data = response.data.data || response.data
     proposals.value = data.proposals
     pagination.value = data.pagination
-  } catch (error) {
-    console.error('Error fetching proposals:', error)
-  } finally {
+  } catch (error) {} finally {
     loading.value = false
   }
 }
@@ -131,9 +129,7 @@ const fetchTags = async () => {
     // Handle new ApiResponse format: { status, message, data: { tags } }
     const data = response.data.data || response.data
     tags.value = data.tags
-  } catch (error) {
-    console.error('Error fetching tags:', error)
-  }
+  } catch (error) {}
 }
 
 const updateFilters = (newFilters) => {
