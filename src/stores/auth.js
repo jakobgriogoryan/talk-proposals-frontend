@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { authApi } from '../api/auth'
+import { extractUserFromResponse } from '../utils/apiHelpers'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -20,7 +21,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const response = await authApi.login(credentials)
-        this.user = response.data.data?.user || response.data.user
+        this.user = extractUserFromResponse(response)
 
         return response.data
       } finally {
@@ -32,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const response = await authApi.register(data)
-        this.user = response.data.data?.user || response.data.user
+        this.user = extractUserFromResponse(response)
 
         return response.data
       } finally {
@@ -60,7 +61,7 @@ export const useAuthStore = defineStore('auth', {
       this.initializing = true
       try {
         const response = await authApi.getUser()
-        this.user = response.data.data?.user || response.data.user
+        this.user = extractUserFromResponse(response)
 
         return this.user
       } catch (error) {

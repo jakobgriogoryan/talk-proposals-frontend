@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { getHomepageRoute } from '../composables/useAuthRedirect'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -81,10 +82,7 @@ router.beforeEach(async (to, from, next) => {
   // Check if route is for guests only - redirect authenticated users to homepage
   if (to.meta.guest && authStore.isAuthenticated) {
     // Redirect authenticated users away from login/register to their homepage
-    if (authStore.isAdmin) return next({ name: 'AdminProposals' })
-    if (authStore.isReviewer) return next({ name: 'ReviewProposals' })
-    if (authStore.isSpeaker) return next({ name: 'Proposals' })
-    return next({ name: 'Proposals' })
+    return next({ name: getHomepageRoute(authStore) })
   }
 
   // Check if route requires authentication
@@ -121,10 +119,10 @@ router.beforeEach(async (to, from, next) => {
     })
 
     if (!hasAccess) {
-      // Redirect based on user role
-      if (authStore.isSpeaker) return next({ name: 'Proposals' })
-      if (authStore.isReviewer) return next({ name: 'ReviewProposals' })
-      if (authStore.isAdmin) return next({ name: 'AdminProposals' })
+      // Redirect to user's homepage if authenticated, otherwise to login
+      if (authStore.isAuthenticated) {
+        return next({ name: getHomepageRoute(authStore) })
+      }
       return next({ name: 'Login' })
     }
   }

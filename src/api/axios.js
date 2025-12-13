@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
+import { getCsrfCookie } from './auth'
 
 const api = axios.create({
   baseURL: '/api',
@@ -10,31 +11,6 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 })
-
-// Create a separate axios instance for CSRF cookie (it's on web routes, not API routes)
-const webApi = axios.create({
-  baseURL: '/',
-  withCredentials: true,
-  headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  },
-})
-
-// CSRF cookie fetching helper
-let csrfCookiePromise = null
-const getCsrfCookie = async () => {
-  if (!csrfCookiePromise) {
-    csrfCookiePromise = webApi.get('/sanctum/csrf-cookie')
-        .then(() => {
-          csrfCookiePromise = null
-        })
-        .catch(() => {
-          csrfCookiePromise = null
-        })
-  }
-  return csrfCookiePromise
-}
 
 // Request interceptor - fetch CSRF cookie for stateful requests
 api.interceptors.request.use(

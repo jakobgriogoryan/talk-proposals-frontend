@@ -21,21 +21,14 @@ const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const { initialize, disconnect } = useRealtime()
 
-// Initialize auth on app mount, but don't block if it fails
+// Initialize CSRF cookie on app mount
 onMounted(async () => {
   // Fetch CSRF cookie on app initialization for Sanctum SPA
+  // Note: User fetching is handled by router's beforeEach guard
   try {
     await authApi.getCsrfCookie()
   } catch (error) {
     // Silently fail - CSRF cookie fetch is best effort
-  }
-  
-  if (!authStore.user && !authStore.initializing) {
-    try {
-      await authStore.fetchUser()
-    } catch (error) {
-      // Silently fail - user is not authenticated
-    }
   }
 })
 

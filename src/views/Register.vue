@@ -83,9 +83,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useAuthRedirect } from '../composables/useAuthRedirect'
 
-const router = useRouter()
 const authStore = useAuthStore()
+const { redirectToHomepage } = useAuthRedirect()
 
 const form = ref({
   name: '',
@@ -99,27 +100,11 @@ const error = ref('')
 const loading = ref(false)
 
 // Redirect if already authenticated
-onMounted(async () => {
-  // Fetch user if not loaded
-  if (!authStore.user && !authStore.initializing) {
-    try {
-      await authStore.fetchUser()
-    } catch (error) {
-      // User not authenticated, stay on register page
-    }
-  }
-
+// Note: User is already fetched by router's beforeEach guard, so we just check authentication status
+onMounted(() => {
   // If authenticated, redirect to appropriate homepage
   if (authStore.isAuthenticated) {
-    if (authStore.isAdmin) {
-      router.push('/admin/proposals')
-    } else if (authStore.isReviewer) {
-      router.push('/review/proposals')
-    } else if (authStore.isSpeaker) {
-      router.push('/proposals')
-    } else {
-      router.push('/proposals')
-    }
+    redirectToHomepage()
   }
 })
 
@@ -129,16 +114,8 @@ const handleRegister = async () => {
   try {
     await authStore.register(form.value)
     
-    // Redirect based on user role
-    if (authStore.isAdmin) {
-      router.push('/admin/proposals')
-    } else if (authStore.isReviewer) {
-      router.push('/review/proposals')
-    } else if (authStore.isSpeaker) {
-      router.push('/proposals')
-    } else {
-    router.push('/proposals')
-    }
+    // Redirect to role-based homepage
+    redirectToHomepage()
   } catch (err) {
     error.value = err.response?.data?.message || 'Registration failed'
   } finally {

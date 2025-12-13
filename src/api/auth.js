@@ -11,10 +11,24 @@ const webApi = axios.create({
   },
 })
 
+// CSRF cookie fetching helper with promise caching to prevent duplicate requests
+let csrfCookiePromise = null
+export const getCsrfCookie = async () => {
+  if (!csrfCookiePromise) {
+    csrfCookiePromise = webApi.get('/sanctum/csrf-cookie')
+        .then(() => {
+          csrfCookiePromise = null
+        })
+        .catch(() => {
+          csrfCookiePromise = null
+        })
+  }
+  return csrfCookiePromise
+}
+
 export const authApi = {
   async getCsrfCookie() {
-    // CSRF cookie route is on web routes, not API routes
-    return webApi.get('/sanctum/csrf-cookie')
+    return getCsrfCookie()
   },
   async register(data) {
     return api.post('/register', data)
