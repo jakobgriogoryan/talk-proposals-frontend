@@ -25,11 +25,13 @@ const webApi = axios.create({
 let csrfCookiePromise = null
 const getCsrfCookie = async () => {
   if (!csrfCookiePromise) {
-    csrfCookiePromise = webApi.get('/sanctum/csrf-cookie').then(() => {
-      csrfCookiePromise = null
-    }).catch(() => {
-      csrfCookiePromise = null
-    })
+    csrfCookiePromise = webApi.get('/sanctum/csrf-cookie')
+        .then(() => {
+          csrfCookiePromise = null
+        })
+        .catch(() => {
+          csrfCookiePromise = null
+        })
   }
   return csrfCookiePromise
 }
@@ -38,7 +40,7 @@ const getCsrfCookie = async () => {
 api.interceptors.request.use(
   async (config) => {
     config.withCredentials = true
-    
+
     // Fetch CSRF cookie for stateful requests (POST, PUT, PATCH, DELETE)
     const method = config.method?.toUpperCase()
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -48,7 +50,7 @@ api.interceptors.request.use(
         // Silently fail - CSRF cookie fetch is best effort
       }
     }
-    
+
     return config
   },
   (error) => {
@@ -61,7 +63,7 @@ api.interceptors.response.use(
   (response) => {
     const method = response.config?.method?.toUpperCase()
     const isFunctionalAction = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
-    
+
     if (isFunctionalAction && response.data?.message && (response.status === 200 || response.status === 201)) {
       try {
         const notificationsStore = useNotificationsStore()
@@ -72,14 +74,14 @@ api.interceptors.response.use(
   },
   async (error) => {
     const notificationsStore = useNotificationsStore()
-    
+
     // Helper function to get user-friendly error messages
     const getUserFriendlyMessage = (error) => {
       // If API provides a message, use it
       if (error.response?.data?.message) {
         return error.response.data.message
       }
-      
+
       // Handle validation errors (422)
       if (error.response?.status === 422 && error.response?.data?.errors) {
         const errors = error.response.data.errors
@@ -91,7 +93,7 @@ api.interceptors.response.use(
           return firstErrorMessage
         }
       }
-      
+
       // Map status codes to user-friendly messages
       const statusMessages = {
         400: 'Invalid request. Please check your input and try again.',
@@ -103,28 +105,28 @@ api.interceptors.response.use(
         500: 'Something went wrong on our end. Please try again later.',
         503: 'Service temporarily unavailable. Please try again later.',
       }
-      
+
       if (error.response?.status) {
         return statusMessages[error.response.status] || 'An unexpected error occurred. Please try again.'
       }
-      
+
       // Network errors
       if (!error.response) {
         return 'Unable to connect to the server. Please check your internet connection and try again.'
       }
-      
+
       return 'An error occurred. Please try again.'
     }
-    
+
     const method = error.config?.method?.toUpperCase()
     const isFunctionalAction = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
     const isUnauthorized = error.response?.status === 401
     const isNetworkError = !error.response
-    
+
     // Always show user-friendly messages for functional actions, 401, and network errors
     if (isNetworkError || isUnauthorized || isFunctionalAction) {
       const userMessage = getUserFriendlyMessage(error)
-      
+
       // For 401, only show message if it's not a user check endpoint
       if (isUnauthorized) {
         const url = error.config?.url || ''
@@ -156,7 +158,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const url = error.config?.url || ''
       const isUserCheck = url.includes('/user') || url.includes('/sanctum/csrf-cookie')
-      
+
       if (!isUserCheck) {
         // Clear user from store
         try {
@@ -165,10 +167,10 @@ api.interceptors.response.use(
             authStore.user = null
           }
         } catch (e) {}
-        
+
         const currentPath = window.location.pathname
         const isOnAuthPage = currentPath === '/login' || currentPath === '/register'
-        
+
         if (!isOnAuthPage) {
           try {
             setTimeout(() => {
@@ -181,7 +183,7 @@ api.interceptors.response.use(
         }
       }
     }
-    
+
     return Promise.reject(error)
   }
 )

@@ -17,11 +17,9 @@ export const authApi = {
     return webApi.get('/sanctum/csrf-cookie')
   },
   async register(data) {
-    await this.getCsrfCookie()
     return api.post('/register', data)
   },
   async login(data) {
-    await this.getCsrfCookie()
     return api.post('/login', data)
   },
   logout() {
