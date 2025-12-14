@@ -173,20 +173,21 @@ const form = ref({
   tags: props.proposal?.tags?.map(t => t.name) || [],
 })
 
+// Optimized: Only watch proposal.id to avoid deep watching
 watch(
-    () => props.proposal,
-    (newProposal) => {
-      if (newProposal) {
+    () => props.proposal?.id,
+    (newId, oldId) => {
+      if (newId && newId !== oldId && props.proposal) {
         form.value = {
-          title: newProposal.title || '',
-          description: newProposal.description || '',
+          title: props.proposal.title || '',
+          description: props.proposal.description || '',
           file: null,
-          tags: newProposal.tags?.map(t => t.name) || [],
+          tags: props.proposal.tags?.map(t => t.name) || [],
         }
-        existingFile.value = newProposal.file_path || null
+        existingFile.value = props.proposal.file_path || null
       }
     },
-    { deep: true }
+    { immediate: true }
 )
 
 const availableTags = computed(() => {
