@@ -1,6 +1,8 @@
 <template>
   <div class="max-w-4xl mx-auto">
-    <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-ocean-400">Loading...</div>
+    <div v-if="loading" class="max-w-4xl mx-auto">
+      <SkeletonLoader type="proposal-detail" />
+    </div>
     <div v-else-if="error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 sm:p-6 mb-4">
       <div class="flex items-start">
         <div class="flex-shrink-0">
@@ -161,6 +163,7 @@ import { proposalsApi, reviewsApi } from '../api'
 import api from '../api/axios'
 import ReviewForm from '../components/ReviewForm.vue'
 import ReviewList from '../components/ReviewList.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()

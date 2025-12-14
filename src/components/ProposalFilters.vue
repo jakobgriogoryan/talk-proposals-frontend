@@ -328,6 +328,7 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 
 const props = defineProps({
   filters: {
@@ -360,18 +361,26 @@ const localFilters = ref({
   status: props.filters.status || '',
 })
 
-let debounceTimer = null
+// Debounced update for search input (300ms delay)
+const updateFilters = () => {
+  emit('update:filters', { ...localFilters.value })
+}
 
+const debouncedUpdate = useDebounceFn(() => {
+  updateFilters()
+}, 300)
+
+// Optimized: Watch specific properties instead of deep watch
 watch(
-    () => props.filters,
-    (newFilters) => {
+    () => [props.filters.search, props.filters.status, props.filters.tags?.length],
+    () => {
       localFilters.value = {
-        search: newFilters.search || '',
-        tags: newFilters.tags || [],
-        status: newFilters.status || '',
+        search: props.filters.search || '',
+        tags: props.filters.tags || [],
+        status: props.filters.status || '',
       }
     },
-    { deep: true }
+    { immediate: true }
 )
 
 const activeFiltersCount = computed(() => {
@@ -453,17 +462,6 @@ const getStatusDotClass = (status) => {
     rejected: 'bg-red-500',
   }
   return classes[status] || 'bg-gray-500'
-}
-
-const debouncedUpdate = () => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    updateFilters()
-  }, 500)
-}
-
-const updateFilters = () => {
-  emit('update:filters', { ...localFilters.value })
 }
 
 const clearFilters = () => {
