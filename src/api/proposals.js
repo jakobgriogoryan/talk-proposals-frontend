@@ -164,5 +164,11 @@ export const proposalsApi = {
           return response
         })
   },
+  download(id) {
+    // Download file using blob response type
+    return api.get(`/proposals/${id}/download`, {
+      responseType: 'blob',
+    })
+  },
 }
 

@@ -12,6 +12,8 @@ const echo = new Echo({
   cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
   forceTLS: true,
   encrypted: true,
+  disableStats: true,
+  enabledTransports: ['ws', 'wss'],
   authEndpoint: '/api/broadcasting/auth',
   auth: {
     headers: {
@@ -35,7 +37,6 @@ const echo = new Echo({
       },
     }
   },
-  enabledTransports: ['ws', 'wss'],
 })
 
 export default echo

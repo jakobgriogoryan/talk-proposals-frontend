@@ -26,12 +26,24 @@
       <div class="bg-white/95 dark:bg-ocean-800/95 backdrop-blur-sm rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-100 dark:border-ocean-700">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 sm:gap-0 mb-4">
           <h1 class="text-2xl sm:text-3xl font-bold flex-1 pr-2 text-gray-800 dark:text-ocean-100">{{ proposal.title }}</h1>
-          <span
-            :class="statusClasses"
-            class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium shrink-0"
-          >
-            {{ proposal.status }}
-          </span>
+          <div class="flex items-center gap-2 shrink-0">
+            <span
+              v-if="proposal.reviews_count > 0 || (authStore.isAdmin && reviews.length > 0)"
+              class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 flex items-center gap-1.5"
+              title="This proposal has been reviewed"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Reviewed ({{ proposal.reviews_count ?? reviews.length }})
+            </span>
+            <span
+              :class="statusClasses"
+              class="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium"
+            >
+              {{ proposal.status }}
+            </span>
+          </div>
         </div>
         <div class="mb-3 sm:mb-4">
           <p class="text-gray-600 dark:text-ocean-300 text-sm sm:text-base">By {{ proposal.user?.name }}</p>
@@ -83,8 +95,47 @@
         </div>
       </div>
 
-      <div v-if="authStore.isReviewer" class="mb-6">
+      <!-- Review Section: Show form if reviewer hasn't reviewed, or show review status -->
+      <div v-if="authStore.isReviewer || authStore.isAdmin" class="mb-6">
+        <!-- Show review status if proposal has been reviewed -->
+        <div v-if="hasReviewed || (authStore.isAdmin && reviews.length > 0)" class="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-xl p-4 sm:p-6 shadow-md">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+              <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-semibold text-green-800 dark:text-green-300 mb-2">
+                {{ currentUserReview ? 'You Have Reviewed This Proposal' : 'Proposal Has Been Reviewed' }}
+              </h3>
+              <p class="text-sm text-green-700 dark:text-green-400 mb-3">
+                This proposal has {{ reviews.length }} review{{ reviews.length !== 1 ? 's' : '' }}.
+              </p>
+              <div v-if="currentUserReview" class="mt-3 p-3 bg-white/80 dark:bg-ocean-800/50 rounded-lg border border-green-200 dark:border-green-700">
+                <p class="text-xs font-medium text-green-900 dark:text-green-200 mb-2">Your Review:</p>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-2xl font-bold text-green-700 dark:text-green-300">{{ currentUserReview.rating }}</span>
+                  <span class="text-sm text-green-600 dark:text-green-400">/ {{ currentUserReview.rating === 10 ? '10' : '5' }}</span>
+                  <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded text-xs font-medium">
+                    {{ currentUserReview.rating === 10 ? 'Outstanding' : currentUserReview.rating >= 4 ? 'Excellent' : currentUserReview.rating >= 3 ? 'Good' : 'Fair' }}
+                  </span>
+                </div>
+                <p v-if="currentUserReview.comment" class="text-sm text-gray-700 dark:text-ocean-200 mt-2 whitespace-pre-wrap">{{ currentUserReview.comment }}</p>
+                <p v-else class="text-xs text-gray-500 dark:text-ocean-400 italic mt-2">No comment provided.</p>
+              </div>
+              <div v-else-if="authStore.isAdmin && reviews.length > 0" class="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-800 dark:text-blue-300">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                As an admin, you can view all reviews below.
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Show review form only if reviewer hasn't reviewed yet -->
         <ReviewForm
+          v-else-if="authStore.isReviewer"
           :loading="reviewLoading"
           :errors="reviewErrors"
           @submit="handleReviewSubmit"
@@ -193,6 +244,18 @@ const statusClasses = computed(() => {
   if (s === 'approved') return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
   if (s === 'rejected') return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
   return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+})
+
+// Check if current user has reviewed this proposal
+const hasReviewed = computed(() => {
+  if (!reviews.value || !authStore.user) return false
+  return reviews.value.some(review => review.reviewer_id === authStore.user.id)
+})
+
+// Get current user's review
+const currentUserReview = computed(() => {
+  if (!reviews.value || !authStore.user) return null
+  return reviews.value.find(review => review.reviewer_id === authStore.user.id) || null
 })
 
 const fetchProposal = async () => {
@@ -304,15 +367,12 @@ const formatDate = (dateString) => {
 }
 
 const downloadFile = async () => {
-  if (!proposal.value?.file_path) return
+    if (!proposal.value?.id || !proposal.value?.file_path) return
   
   downloadError.value = ''
   try {
-    // The file_path from the API is already a relative path like /proposals/2/download
-    // Axios will automatically prepend the baseURL (/api)
-    const response = await api.get(proposal.value.file_path, {
-      responseType: 'blob',
-    })
+    // Use the correct download endpoint with proposal ID
+    const response = await proposalsApi.download(proposal.value.id)
     
     // Check if response is actually an error (sometimes errors come as blobs)
     if (response.data.type && response.data.type.includes('application/json')) {
@@ -439,15 +499,25 @@ const fetchRatingOptions = async () => {
 // Handle status changes from global events
 const handleStatusChanged = (event) => {
   const data = event.detail
-  if (proposal.value && (proposal.value.id === data.proposal_id || proposal.value.id === data.proposal?.id)) {
+  const routeId = parseInt(route.params.id, 10)
+  const proposalId = proposal.value?.id
+  const eventProposalId = data.proposal_id || data.proposal?.id
+  
+  // Check if this event is for the current proposal (route ID is primary check)
+  // Use loose equality to handle string/number mismatches
+  const isMatch = routeId == eventProposalId || 
+                 String(routeId) === String(eventProposalId) ||
+                 (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
+  
+  if (isMatch) {
     // Update the entire proposal object with the new data
     if (data.proposal) {
       proposal.value = {
-        ...proposal.value,
+        ...(proposal.value || {}),
         ...data.proposal,
         status: data.new_status,
       }
-    } else {
+    } else if (proposal.value) {
       proposal.value.status = data.new_status
     }
     status.value = data.new_status
@@ -467,12 +537,26 @@ onMounted(() => {
       },
       onStatusChanged: (data) => {
         // Update proposal with full resource from event
-        if (proposal.value && proposal.value.id === data.proposal_id) {
+        const routeId = parseInt(route.params.id, 10)
+        const proposalId = proposal.value?.id
+        const eventProposalId = data.proposal_id || data.proposal?.id
+        
+        // Check if this event is for the current proposal (route ID is primary check)
+        // Use loose equality to handle string/number mismatches
+        const isMatch = routeId == eventProposalId || 
+                       String(routeId) === String(eventProposalId) ||
+                       (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
+        
+        if (isMatch) {
           // Update the entire proposal object with the new data
-          proposal.value = {
-            ...proposal.value,
-            ...data.proposal,
-            status: data.new_status,
+          if (data.proposal) {
+            proposal.value = {
+              ...(proposal.value || {}),
+              ...data.proposal,
+              status: data.new_status,
+            }
+          } else if (proposal.value) {
+            proposal.value.status = data.new_status
           }
           status.value = data.new_status
           
