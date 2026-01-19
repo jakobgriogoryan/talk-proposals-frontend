@@ -2,50 +2,86 @@
   <div class="max-w-md mx-auto mt-8 sm:mt-12 lg:mt-16 px-4">
     <div class="bg-white/90 dark:bg-ocean-800/90 backdrop-blur-sm shadow-lg rounded-xl p-6 sm:p-8 border border-gray-200/50 dark:border-ocean-700/50 transition-colors">
       <h1 class="text-xl sm:text-2xl font-bold mb-5 sm:mb-6 text-center bg-gradient-to-r from-blue-600 to-blue-800 dark:from-ocean-400 dark:to-ocean-300 bg-clip-text text-transparent">Register</h1>
-      <form @submit.prevent="handleRegister" class="space-y-4 sm:space-y-5">
+      <form @submit.prevent="handleRegister" class="space-y-4 sm:space-y-5" autocomplete="on">
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
+          <label for="register-name" class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
             Name
           </label>
           <input
+            id="register-name"
             v-model="form.name"
             type="text"
+            name="name"
+            autocomplete="name"
             required
-            class="w-full px-3.5 py-2.5 border border-gray-200 dark:border-ocean-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
+            :class="[
+              'w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500',
+              errors.name ? 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:focus:ring-red-500' : 'border-gray-200 dark:border-ocean-700 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500'
+            ]"
           />
+          <div v-if="errors.name" class="text-red-500 dark:text-red-400 text-sm mt-1">
+            {{ Array.isArray(errors.name) ? errors.name[0] : errors.name }}
+          </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
+          <label for="register-email" class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
             Email
           </label>
           <input
+            id="register-email"
             v-model="form.email"
             type="email"
+            name="email"
+            autocomplete="email"
             required
-            class="w-full px-3.5 py-2.5 border border-gray-200 dark:border-ocean-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
+            :class="[
+              'w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500',
+              errors.email ? 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:focus:ring-red-500' : 'border-gray-200 dark:border-ocean-700 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500'
+            ]"
           />
+          <div v-if="errors.email" class="text-red-500 dark:text-red-400 text-sm mt-1">
+            {{ Array.isArray(errors.email) ? errors.email[0] : errors.email }}
+          </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
+          <label for="register-password" class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
             Password
           </label>
           <input
+            id="register-password"
             v-model="form.password"
             type="password"
+            name="password"
+            autocomplete="new-password"
             required
-            class="w-full px-3.5 py-2.5 border border-gray-200 dark:border-ocean-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
+            :class="[
+              'w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500',
+              errors.password ? 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:focus:ring-red-500' : 'border-gray-200 dark:border-ocean-700 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500'
+            ]"
           />
+          <div v-if="errors.password" class="text-red-500 dark:text-red-400 text-sm mt-1">
+            {{ Array.isArray(errors.password) ? errors.password[0] : errors.password }}
+          </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
+          <label for="register-password-confirmation" class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
             Confirm Password
           </label>
           <input
+            id="register-password-confirmation"
             v-model="form.password_confirmation"
             type="password"
+            name="password_confirmation"
+            autocomplete="new-password"
             required
-            class="w-full px-3.5 py-2.5 border border-gray-200 dark:border-ocean-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
+            :class="[
+              'w-full px-3.5 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm hover:shadow-md bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500',
+              errors.password_confirmation ? 'border-red-300 dark:border-red-600 focus:ring-red-500 dark:focus:ring-red-500' : 'border-gray-200 dark:border-ocean-700 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500'
+            ]"
           />
+          <div v-if="errors.password_confirmation" class="text-red-500 dark:text-red-400 text-sm mt-1">
+            {{ Array.isArray(errors.password_confirmation) ? errors.password_confirmation[0] : errors.password_confirmation }}
+          </div>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
@@ -96,6 +132,7 @@ const form = ref({
   role: 'speaker',
 })
 
+const errors = ref({})
 const error = ref('')
 const loading = ref(false)
 
@@ -110,6 +147,7 @@ onMounted(() => {
 
 const handleRegister = async () => {
   error.value = ''
+  errors.value = {}
   loading.value = true
   try {
     await authStore.register(form.value)
@@ -117,7 +155,13 @@ const handleRegister = async () => {
     // Redirect to role-based homepage
     redirectToHomepage()
   } catch (err) {
-    error.value = err.response?.data?.message || 'Registration failed'
+    // Handle validation errors (422)
+    if (err.response?.data?.errors) {
+      errors.value = err.response.data.errors
+    } else {
+      // Fallback to generic message for non-validation errors
+      error.value = err.response?.data?.message || 'Registration failed'
+    }
   } finally {
     loading.value = false
   }
