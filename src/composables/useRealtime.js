@@ -1,129 +1,170 @@
-import { onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
 import echo from '../config/echo'
 
+export const REALTIME_EVENTS = Object.freeze({
+  submitted: '.proposal.submitted',
+  reviewed: '.proposal.reviewed',
+  statusChanged: '.proposal.status.changed',
+})
+
+const statusColors = {
+  approved: 'success',
+  rejected: 'error',
+  pending: 'warning',
+}
+
 /**
- * Composable for handling real-time WebSocket events
+ * Owns every Echo subscription created by one consumer so it can remove the
+ * exact callbacks and leave the corresponding private channels.
  */
 export function useRealtime() {
   const authStore = useAuthStore()
   const notificationsStore = useNotificationsStore()
+  const channels = new Map()
+  const recentlyHandledEvents = new Map()
 
-  let channels = []
+  const eventKey = (eventName, data) => {
+    const proposalId = data.proposal_id ?? data.proposal?.id ?? 'unknown'
+    const detail = data.review?.id ?? data.new_status ?? ''
 
-  /**
-   * Initialize real-time listeners
-   */
+    return `${eventName}:${proposalId}:${detail}`
+  }
+
+  const handleOnce = (eventName, data, handler) => {
+    const now = Date.now()
+
+    for (const [key, handledAt] of recentlyHandledEvents) {
+      if (now - handledAt > 5000) {
+        recentlyHandledEvents.delete(key)
+      }
+    }
+
+    const key = eventKey(eventName, data)
+    const handledAt = recentlyHandledEvents.get(key)
+
+    if (handledAt && now - handledAt <= 5000) {
+      return
+    }
+
+    recentlyHandledEvents.set(key, now)
+    handler()
+  }
+
+  const stopChannel = (channelName, expectedChannel = null) => {
+    const registration = channels.get(channelName)
+
+    if (!registration || (expectedChannel && registration.channel !== expectedChannel)) {
+      return
+    }
+
+    registration.listeners.forEach((callback, eventName) => {
+      registration.channel.stopListening(eventName, callback)
+    })
+
+    echo.leave(channelName)
+    channels.delete(channelName)
+  }
+
+  const subscribe = (channelName, listeners) => {
+    stopChannel(channelName)
+
+    const channel = echo.private(channelName)
+    const registeredListeners = new Map()
+
+    Object.entries(listeners).forEach(([eventName, callback]) => {
+      if (typeof callback !== 'function') {
+        return
+      }
+
+      channel.listen(eventName, callback)
+      registeredListeners.set(eventName, callback)
+    })
+
+    channels.set(channelName, { channel, listeners: registeredListeners })
+
+    return () => stopChannel(channelName, channel)
+  }
+
+  const dispatch = (eventName, data) => {
+    window.dispatchEvent(new CustomEvent(eventName, { detail: data }))
+  }
+
+  const handleSubmitted = (data, ownerMessage = false) => {
+    handleOnce(REALTIME_EVENTS.submitted, data, () => {
+      const message = ownerMessage
+        ? `Your proposal "${data.proposal.title}" has been submitted`
+        : data.message
+
+      notificationsStore.push(message, ownerMessage ? 'success' : 'info', 6000)
+      dispatch('proposal-submitted', data)
+    })
+  }
+
+  const handleReviewed = (data, ownerMessage = false) => {
+    handleOnce(REALTIME_EVENTS.reviewed, data, () => {
+      const message = ownerMessage
+        ? `Your proposal "${data.proposal.title}" received a new review (Rating: ${data.review.rating})`
+        : data.message
+
+      notificationsStore.push(message, 'info', 6000)
+      dispatch('proposal-reviewed', data)
+    })
+  }
+
+  const handleStatusChanged = (data, ownerMessage = false) => {
+    handleOnce(REALTIME_EVENTS.statusChanged, data, () => {
+      const ownerMessages = {
+        approved: `Your proposal "${data.proposal?.title || 'proposal'}" has been approved! 🎉`,
+        rejected: `Your proposal "${data.proposal?.title || 'proposal'}" has been rejected`,
+        pending: `Your proposal "${data.proposal?.title || 'proposal'}" status changed to pending`,
+      }
+      const message = ownerMessage ? ownerMessages[data.new_status] || data.message : data.message
+      const type = statusColors[data.new_status] || 'info'
+
+      notificationsStore.push(message, type, ownerMessage ? 8000 : 6000)
+      dispatch('proposal-status-changed', data)
+    })
+  }
+
+  const disconnect = () => {
+    Array.from(channels.keys()).forEach((channelName) => stopChannel(channelName))
+    recentlyHandledEvents.clear()
+  }
+
   const initialize = () => {
+    disconnect()
+
     if (!authStore.isAuthenticated) {
       return
     }
 
-    // Listen to general proposals channel (for admins and reviewers)
-    if (authStore.isAdmin || authStore.isReviewer) {
-      const proposalsChannel = echo.private('proposals')
-      
-      // Listen for new proposals
-      proposalsChannel.listen('.proposal.submitted', (data) => {
-        notificationsStore.push(data.message, 'info', 6000)
-        // Emit custom event for components to refresh
-        window.dispatchEvent(new CustomEvent('proposal-submitted', { detail: data }))
+    if (authStore.isReviewer) {
+      subscribe('proposals', {
+        [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data),
+        [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data),
+        [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data),
       })
-
-      // Listen for reviews
-      proposalsChannel.listen('.proposal.reviewed', (data) => {
-        notificationsStore.push(data.message, 'info', 6000)
-        window.dispatchEvent(new CustomEvent('proposal-reviewed', { detail: data }))
-      })
-
-      // Listen for status changes (ProposalStatusChanged event)
-      proposalsChannel.listen('.ProposalStatusChanged', (data) => {
-        const statusColors = {
-          approved: 'success',
-          rejected: 'error',
-          pending: 'warning',
-        }
-        notificationsStore.push(data.message, statusColors[data.new_status] || 'info', 6000)
-        window.dispatchEvent(new CustomEvent('proposal-status-changed', { detail: data }))
-      })
-
-      channels.push(proposalsChannel)
     }
 
-    // Listen to user-specific channel (for speakers)
     if (authStore.user?.id) {
-      const userChannel = echo.private(`user.${authStore.user.id}`)
-      
-      userChannel.listen('.proposal.submitted', (data) => {
-        notificationsStore.push(`Your proposal "${data.proposal.title}" has been submitted`, 'success', 6000)
+      subscribe(`user.${authStore.user.id}`, {
+        [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data, true),
+        [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data, true),
+        [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data, true),
       })
-
-      userChannel.listen('.proposal.reviewed', (data) => {
-        notificationsStore.push(
-          `Your proposal "${data.proposal.title}" received a new review (Rating: ${data.review.rating})`,
-          'info',
-          6000
-        )
-        window.dispatchEvent(new CustomEvent('proposal-reviewed', { detail: data }))
-      })
-
-      userChannel.listen('.ProposalStatusChanged', (data) => {
-        const statusMessages = {
-          approved: `Your proposal "${data.proposal?.title || 'proposal'}" has been approved! 🎉`,
-          rejected: `Your proposal "${data.proposal?.title || 'proposal'}" has been rejected`,
-          pending: `Your proposal "${data.proposal?.title || 'proposal'}" status changed to pending`,
-        }
-        const message = statusMessages[data.new_status] || data.message
-        const type = data.new_status === 'approved' ? 'success' : data.new_status === 'rejected' ? 'error' : 'warning'
-        notificationsStore.push(message, type, 8000)
-        window.dispatchEvent(new CustomEvent('proposal-status-changed', { detail: data }))
-      })
-
-      channels.push(userChannel)
     }
   }
 
-  /**
-   * Listen to specific proposal channel (proposals.{id})
-   */
   const listenToProposal = (proposalId, callbacks = {}) => {
-    if (!authStore.isAuthenticated) {
-      return null
+    if (!authStore.isAuthenticated || !proposalId) {
+      return () => {}
     }
 
-    const proposalChannel = echo.private(`proposals.${proposalId}`)
-
-    if (callbacks.onReviewed) {
-      proposalChannel.listen('.proposal.reviewed', callbacks.onReviewed)
-    }
-
-    if (callbacks.onStatusChanged) {
-      // Listen to ProposalStatusChanged event
-      proposalChannel.listen('.ProposalStatusChanged', callbacks.onStatusChanged)
-    }
-
-    channels.push(proposalChannel)
-    return proposalChannel
-  }
-
-  /**
-   * Disconnect all channels and clean up resources
-   */
-  const disconnect = () => {
-    channels.forEach(channel => {
-      try {
-        // Stop listening to all events
-        channel.stopListening('.proposal.submitted')
-        channel.stopListening('.proposal.reviewed')
-        channel.stopListening('.ProposalStatusChanged')
-        // Leave the channel to fully disconnect
-        channel.leave()
-      } catch (error) {
-        // Silently handle errors during cleanup
-      }
+    return subscribe(`proposals.${proposalId}`, {
+      [REALTIME_EVENTS.reviewed]: callbacks.onReviewed,
+      [REALTIME_EVENTS.statusChanged]: callbacks.onStatusChanged,
     })
-    channels = []
   }
 
   return {
@@ -132,4 +173,3 @@ export function useRealtime() {
     disconnect,
   }
 }
-

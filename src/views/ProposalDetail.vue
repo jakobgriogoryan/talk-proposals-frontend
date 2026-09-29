@@ -205,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
@@ -237,6 +237,7 @@ const editReviewLoading = ref(false)
 const editReviewError = ref('')
 const ratingOptions = ref([])
 const { listenToProposal } = useRealtime()
+let stopProposalRealtime = () => {}
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -499,17 +500,13 @@ const fetchRatingOptions = async () => {
 // Handle status changes from global events
 const handleStatusChanged = (event) => {
   const data = event.detail
-  const routeId = parseInt(route.params.id, 10)
-  const proposalId = proposal.value?.id
-  const eventProposalId = data.proposal_id || data.proposal?.id
-  
-  // Check if this event is for the current proposal (route ID is primary check)
-  // Use loose equality to handle string/number mismatches
-  const isMatch = routeId == eventProposalId || 
-                 String(routeId) === String(eventProposalId) ||
-                 (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
-  
-  if (isMatch) {
+  if (
+    proposal.value
+    && (
+      String(proposal.value.id) === String(data.proposal_id)
+      || String(proposal.value.id) === String(data.proposal?.id)
+    )
+  ) {
     // Update the entire proposal object with the new data
     if (data.proposal) {
       proposal.value = {
@@ -524,55 +521,54 @@ const handleStatusChanged = (event) => {
   }
 }
 
+const subscribeToProposal = (proposalId) => {
+  stopProposalRealtime()
+  stopProposalRealtime = () => {}
+
+  if (!proposalId) {
+    return
+  }
+
+  stopProposalRealtime = listenToProposal(proposalId, {
+    onReviewed: () => {
+      fetchReviews()
+    },
+    onStatusChanged: (data) => {
+      if (proposal.value && String(proposal.value.id) === String(data.proposal_id)) {
+        proposal.value = {
+          ...proposal.value,
+          ...data.proposal,
+          status: data.new_status,
+        }
+        status.value = data.new_status
+      }
+    },
+  })
+}
+
 onMounted(() => {
   fetchProposal()
   fetchRatingOptions()
-  
-  // Listen to real-time events for this specific proposal
-  if (route.params.id) {
-    listenToProposal(route.params.id, {
-      onReviewed: () => {
-        // Refresh reviews when a new review is added
-        fetchReviews()
-      },
-      onStatusChanged: (data) => {
-        // Update proposal with full resource from event
-        const routeId = parseInt(route.params.id, 10)
-        const proposalId = proposal.value?.id
-        const eventProposalId = data.proposal_id || data.proposal?.id
-        
-        // Check if this event is for the current proposal (route ID is primary check)
-        // Use loose equality to handle string/number mismatches
-        const isMatch = routeId == eventProposalId || 
-                       String(routeId) === String(eventProposalId) ||
-                       (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
-        
-        if (isMatch) {
-          // Update the entire proposal object with the new data
-          if (data.proposal) {
-            proposal.value = {
-              ...(proposal.value || {}),
-              ...data.proposal,
-              status: data.new_status,
-            }
-          } else if (proposal.value) {
-            proposal.value.status = data.new_status
-          }
-          status.value = data.new_status
-          
-          // Show notification
-          notificationsStore.push(data.message, 'info', 5000)
-        }
-      },
-    })
-  }
+  subscribeToProposal(route.params.id)
   
   // Also listen to global events for status changes
   window.addEventListener('proposal-status-changed', handleStatusChanged)
 })
 
+watch(
+  () => route.params.id,
+  (proposalId, previousProposalId) => {
+    if (proposalId === previousProposalId) {
+      return
+    }
+
+    subscribeToProposal(proposalId)
+    fetchProposal()
+  }
+)
+
 onUnmounted(() => {
+  stopProposalRealtime()
   window.removeEventListener('proposal-status-changed', handleStatusChanged)
 })
 </script>
-
