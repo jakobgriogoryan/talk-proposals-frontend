@@ -31,6 +31,29 @@ npm install
 npm run dev
 ```
 
+### Local domain development
+
+Open `http://talkproposals.test` through local Nginx while Laravel runs on
+`127.0.0.1:8000` and Vite runs on `127.0.0.1:5173` in separate terminals.
+Both processes must stay running; this setup serves the current source with
+hot reload, not an older `dist` build.
+
+Nginx must route `/api` and `/sanctum` to Laravel, and all other requests to
+Vite, preserving the browser's `Host` and forwarding WebSocket upgrades for
+hot reload. The optional `api.talkproposals.test` host should also route to
+Laravel. Map both domain names to `127.0.0.1` in the local hosts file.
+
+Configure Laravel's stateful domains to include `talkproposals.test` and
+`api.talkproposals.test`, its session cookie domain to `.talkproposals.test`,
+and disable secure-only cookies for this HTTP-only local setup. Clear Laravel's
+configuration cache after changing local configuration. Do not mix this cookie
+setup with browsing the frontend through `127.0.0.1:5173`.
+
+The Vite configuration explicitly allows `talkproposals.test` and reserves port
+5173 instead of silently switching ports. Without logging in, domain health
+checks should return `200` for `/login`, `204` for `/sanctum/csrf-cookie`, and
+JSON `401` for `/api/user`.
+
 ### Compile and Minify for Production
 
 ```sh

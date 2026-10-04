@@ -51,6 +51,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
+    allowedHosts: ['talkproposals.test'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
