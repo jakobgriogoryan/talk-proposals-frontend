@@ -19,6 +19,16 @@ This template should help get you started developing with Vue 3 in Vite.
 
 See [Vite Configuration Reference](https://vite.dev/config/).
 
+### Default theme
+
+Set `VITE_DEFAULT_THEME=light` or `VITE_DEFAULT_THEME=dark` in the frontend `.env`.
+Missing or invalid values fall back to light. This controls the default only:
+a saved browser preference takes priority, and the theme toggle still works.
+An invalid saved preference uses the environment default.
+
+Restart Vite after changing `.env`; production deployments require a new build.
+This is public frontend configuration, not a Laravel backend setting.
+
 ## Project Setup
 
 ```sh
