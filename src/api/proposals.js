@@ -40,11 +40,11 @@ export const proposalsApi = {
     const formData = new FormData()
     formData.append('title', data.title)
     formData.append('description', data.description)
-    formData.append('file', data.file)
+    if (data.file) formData.append('file', data.file)
 
-    data.tags.forEach(tag => {
+    for (const tag of data.tags || []) {
       formData.append('tags[]', tag)
-    })
+    }
 
     return api.post('/proposals', formData, {
       headers: {
@@ -68,9 +68,12 @@ export const proposalsApi = {
     if (data.description) formData.append('description', data.description)
     if (data.file) formData.append('file', data.file)
     if (data.tags) {
-      data.tags.forEach(tag => {
-        formData.append('tags[]', tag)
-      })
+      if (data.tags.length === 0) {
+        // Multipart has no native representation of an empty array.
+        formData.append('tags', '[]')
+      } else {
+        data.tags.forEach(tag => formData.append('tags[]', tag))
+      }
     }
     formData.append('_method', 'PUT')
     return api.post(`/proposals/${id}`, formData, {
@@ -171,4 +174,3 @@ export const proposalsApi = {
     })
   },
 }
-

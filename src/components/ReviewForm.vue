@@ -3,24 +3,10 @@
     <h3 class="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-ocean-100">Add Review</h3>
     <form @submit.prevent="handleSubmit" class="space-y-3 sm:space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
+        <label for="review-rating" class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
           Rating *
         </label>
-        <select
-            v-model="form.rating"
-            required
-            class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-            :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.rating }"
-        >
-          <option value="">Select rating</option>
-          <option
-            v-for="rating in ratingOptions"
-            :key="rating.value"
-            :value="rating.value"
-          >
-            {{ rating.label }}
-          </option>
-        </select>
+        <AppSelect id="review-rating" v-model="form.rating" :options="ratingOptions" placeholder="Select rating" required :disabled="loading" :error="errors.rating" />
         <p class="text-xs text-gray-500 dark:text-ocean-400 mt-1">
           <span v-if="ratingOptions.length > 0">
             Select a rating from {{ ratingOptions.map(r => r.value).join(', ') }}.
@@ -59,6 +45,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { reviewsApi } from '../api'
+import AppSelect from './AppSelect.vue'
 
 const emit = defineEmits(['submit'])
 
@@ -115,4 +102,3 @@ const handleSubmit = () => {
   })
 }
 </script>
-

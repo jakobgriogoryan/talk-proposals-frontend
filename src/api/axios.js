@@ -19,12 +19,8 @@ api.interceptors.request.use(
 
     // Fetch CSRF cookie for stateful requests (POST, PUT, PATCH, DELETE)
     const method = config.method?.toUpperCase()
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      try {
-        await getCsrfCookie()
-      } catch (e) {
-        // Silently fail - CSRF cookie fetch is best effort
-      }
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !config._csrfRetried) {
+      await getCsrfCookie()
     }
 
     return config
@@ -51,7 +47,17 @@ api.interceptors.response.use(
   async (error) => {
     const notificationsStore = useNotificationsStore()
 
-
+    // Recover once, before notifying. A second 419 is a terminal failure.
+    if (error.response?.status === 419 && error.config && !error.config._csrfRetried) {
+      error.config._csrfRetried = true
+      try {
+        await getCsrfCookie()
+      } catch (refreshError) {
+        notificationsStore.push('Session expired. Please refresh the page and try again.', 'error')
+        return Promise.reject(error)
+      }
+      return api.request(error.config)
+    }
 
     // Helper function to get user-friendly error messages
     const getUserFriendlyMessage = (error) => {
@@ -119,21 +125,6 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle 419 CSRF token mismatch - fetch CSRF cookie and retry
-    if (error.response?.status === 419) {
-      try {
-        await getCsrfCookie()
-        // Retry the original request
-        if (error.config) {
-          return api.request(error.config)
-        }
-      } catch (e) {
-        // If retry fails, show error
-        notificationsStore.push('Session expired. Please refresh the page and try again.', 'error')
-      }
-      return Promise.reject(error)
-    }
-
     // Handle 401 unauthorized - redirect to login
     if (error.response?.status === 401) {
       // For expected 401s on user check endpoints, return a resolved promise with proper axios response structure
@@ -179,4 +170,3 @@ api.interceptors.response.use(
 )
 
 export default api
-

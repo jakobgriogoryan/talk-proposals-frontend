@@ -69,3 +69,24 @@ JSON `401` for `/api/user`.
 ```sh
 npm run build
 ```
+
+### Shared dropdowns and workflow checks
+
+`AppSelect` provides consistent native single-select controls for roles, proposal
+statuses, and review ratings. It preserves numeric option values, native keyboard
+behavior, labels, validation states, and light/dark colors. `TagMultiSelect` owns
+search and dismissal behavior and emits new selection arrays instead of mutating
+parent state.
+
+Proposal submissions omit absent PDF uploads and optional tags. Editing with no
+tags sends the explicit multipart empty-list marker; omitting tags preserves the
+existing selection. CSRF preparation failures stop mutations, and a 419 response
+can trigger at most one recovery attempt. Proposal detail requests discard stale
+responses after navigation or unmount.
+
+Run `npm test` and `npm run build`. Manual browser checks:
+
+- Check status, rating, registration role, and tag controls in both themes and at mobile widths; labels and arrows must not overlap text.
+- Open tags, search, select with keyboard, press Escape, and click outside. Escape restores focus to the trigger; Tab can leave the picker.
+- Submit without a PDF, edit a proposal to remove all tags, and navigate between proposals while requests are pending.
+- With a persistently invalid CSRF session, confirm one retry and one terminal notification, not an endless request loop.

@@ -76,19 +76,10 @@
           </div>
         </div>
         <div v-if="authStore.isAdmin" class="mt-3 sm:mt-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
+          <label for="proposal-status" class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
             Change Status
           </label>
-          <select
-            v-model="status"
-            @change="updateStatus"
-            class="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-            :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': statusError }"
-          >
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <AppSelect id="proposal-status" v-model="status" :options="statusOptions" compact :error="statusError" @change="updateStatus" />
           <div v-if="statusError" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ statusError }}
           </div>
@@ -150,23 +141,10 @@
           <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-ocean-100">Edit Review</h3>
           <form @submit.prevent="handleUpdateReview" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
+              <label for="edit-review-rating" class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
                 Rating *
               </label>
-              <select
-                v-model="editReviewForm.rating"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-              >
-                <option value="">Select rating</option>
-                <option
-                  v-for="rating in ratingOptions"
-                  :key="rating.value"
-                  :value="rating.value"
-                >
-                  {{ rating.label }}
-                </option>
-              </select>
+              <AppSelect id="edit-review-rating" v-model="editReviewForm.rating" :options="ratingOptions" placeholder="Select rating" required :disabled="editReviewLoading" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
@@ -215,6 +193,8 @@ import api from '../api/axios'
 import ReviewForm from '../components/ReviewForm.vue'
 import ReviewList from '../components/ReviewList.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
+import AppSelect from '../components/AppSelect.vue'
+import { statusOptions } from '../utils/selectOptions'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -238,6 +218,8 @@ const editReviewError = ref('')
 const ratingOptions = ref([])
 const { listenToProposal } = useRealtime()
 let stopProposalRealtime = () => {}
+let proposalRequest = 0
+let reviewsRequest = 0
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -260,18 +242,22 @@ const currentUserReview = computed(() => {
 })
 
 const fetchProposal = async () => {
+  const request = ++proposalRequest
+  const proposalId = String(route.params.id)
+  const reviewRequest = ++reviewsRequest
   error.value = ''
   loading.value = true
   try {
     // Fetch proposal and reviews in parallel for better performance
     const [proposalResponse, reviewsResponse] = await Promise.all([
-      proposalsApi.getOne(route.params.id),
-      reviewsApi.getForProposal(route.params.id).catch(err => {
+      proposalsApi.getOne(proposalId),
+      reviewsApi.getForProposal(proposalId).catch(err => {
         // If reviews fail, just log and continue
         return { data: { data: { reviews: [] } } }
       })
     ])
     
+    if (request !== proposalRequest || proposalId !== String(route.params.id)) return
     // Handle new ApiResponse format: { status, message, data: { proposal } }
     const proposalData = proposalResponse.data.data || proposalResponse.data
     proposal.value = proposalData.proposal
@@ -279,8 +265,9 @@ const fetchProposal = async () => {
     
     // Handle reviews response
     const reviewsData = reviewsResponse.data.data || reviewsResponse.data
-    reviews.value = reviewsData.reviews || []
+    if (reviewRequest === reviewsRequest) reviews.value = reviewsData.reviews || []
   } catch (err) {
+    if (request !== proposalRequest || proposalId !== String(route.params.id)) return
     // Get user-friendly error message
     let errorMessage = 'Failed to load proposal. Please try again.'
     
@@ -301,16 +288,18 @@ const fetchProposal = async () => {
     error.value = errorMessage
     proposal.value = null
   } finally {
-    loading.value = false
+    if (request === proposalRequest) loading.value = false
   }
 }
 
 const fetchReviews = async () => {
+  const request = ++reviewsRequest
+  const proposalId = String(route.params.id)
   try {
-    const response = await reviewsApi.getForProposal(route.params.id)
+    const response = await reviewsApi.getForProposal(proposalId)
     // Handle new ApiResponse format: { status, message, data: { reviews } }
     const data = response.data.data || response.data
-    reviews.value = data.reviews
+    if (request === reviewsRequest && proposalId === String(route.params.id)) reviews.value = data.reviews
   } catch (error) {}
 }
 
@@ -563,11 +552,15 @@ watch(
     }
 
     subscribeToProposal(proposalId)
+    reviews.value = []
+    cancelEditReview()
     fetchProposal()
   }
 )
 
 onUnmounted(() => {
+  proposalRequest++
+  reviewsRequest++
   stopProposalRealtime()
   window.removeEventListener('proposal-status-changed', handleStatusChanged)
 })

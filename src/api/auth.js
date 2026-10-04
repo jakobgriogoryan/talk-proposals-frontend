@@ -16,10 +16,7 @@ let csrfCookiePromise = null
 export const getCsrfCookie = async () => {
   if (!csrfCookiePromise) {
     csrfCookiePromise = webApi.get('/sanctum/csrf-cookie')
-        .then(() => {
-          csrfCookiePromise = null
-        })
-        .catch(() => {
+        .finally(() => {
           csrfCookiePromise = null
         })
   }
@@ -43,4 +40,3 @@ export const authApi = {
     return api.get('/user')
   },
 }
-
