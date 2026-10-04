@@ -11,6 +11,13 @@ beforeEach(() => {
 })
 
 describe('proposal multipart payloads', () => {
+  it('sends explicitly cleared required fields so the API can validate them', async () => {
+    await proposalsApi.update(1, { title: '', description: '' })
+    const form = mocks.post.mock.calls[0][1]
+    expect(form.get('title')).toBe('')
+    expect(form.get('description')).toBe('')
+  })
+
   it('omits an optional attachment rather than sending the string null', async () => {
     await proposalsApi.create({ title: 'Title', description: 'Description', file: null, tags: [] })
     expect(mocks.post.mock.calls[0][1].has('file')).toBe(false)

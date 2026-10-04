@@ -90,3 +90,25 @@ Run `npm test` and `npm run build`. Manual browser checks:
 - Open tags, search, select with keyboard, press Escape, and click outside. Escape restores focus to the trigger; Tab can leave the picker.
 - Submit without a PDF, edit a proposal to remove all tags, and navigate between proposals while requests are pending.
 - With a persistently invalid CSRF session, confirm one retry and one terminal notification, not an endless request loop.
+
+### Response caching
+
+`src/api/cache.js` centralizes cached GET requests and successful mutation
+invalidation. Proposal mutations invalidate all proposal views; review mutations
+also invalidate proposal ratings and matching review pages. Failed mutations
+leave valid cache entries intact. A cache generation prevents requests that began
+before invalidation from storing outdated responses after they finish.
+
+Authentication identity or role changes and logout clear cached responses. An
+unchanged user refresh retains them. Cache getters are read-only and expire entries
+at the exact TTL boundary; `clearExpired()` removes expired entries explicitly.
+Coverage lives in `tests/apiCache.test.js`.
+
+### Authentication initialization
+
+`fetchUser()` shares one in-flight request per auth store. Concurrent callers
+receive the same success or failure without polling timers, and failures do not
+prevent a later retry. User checks started before a login/logout or identity
+change cannot overwrite the current session. The router guard awaits this shared
+request without an arbitrary timer cutoff, then applies existing guest/role
+restrictions. Tests: `tests/authInitialization.test.js`.

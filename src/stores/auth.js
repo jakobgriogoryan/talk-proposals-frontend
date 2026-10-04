@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia'
 import { authApi } from '../api/auth'
 import { extractUserFromResponse } from '../utils/apiHelpers'
+import { useCacheStore } from './cache'
+
+// In-flight requests belong to a store, not to every Pinia instance in the app/tests.
+const userRequests = new WeakMap()
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     loading: false,
     initializing: false,
+    sessionVersion: 0,
   }),
 
   getters: {
@@ -17,11 +22,19 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    setUser(user) {
+      this.sessionVersion++
+      if (this.user?.id !== user?.id || this.user?.role !== user?.role) {
+        useCacheStore().clear()
+      }
+      this.user = user
+    },
+
     async login(credentials) {
       this.loading = true
       try {
         const response = await authApi.login(credentials)
-        this.user = extractUserFromResponse(response)
+        this.setUser(extractUserFromResponse(response))
 
         return response.data
       } finally {
@@ -33,7 +46,7 @@ export const useAuthStore = defineStore('auth', {
       this.loading = true
       try {
         const response = await authApi.register(data)
-        this.user = extractUserFromResponse(response)
+        this.setUser(extractUserFromResponse(response))
 
         return response.data
       } finally {
@@ -45,43 +58,41 @@ export const useAuthStore = defineStore('auth', {
       try {
         await authApi.logout()
       } finally {
-        this.user = null
+        useCacheStore().clear()
+        this.setUser(null)
       }
     },
 
-    async fetchUser() {
-      if (this.initializing) {
-        while (this.initializing) {
-          await new Promise(resolve => setTimeout(resolve, 50))
-        }
+    fetchUser() {
+      const pending = userRequests.get(this)
+      if (pending) return pending
 
-        return this.user
-      }
-
+      const version = this.sessionVersion
       this.initializing = true
-      try {
-        const response = await authApi.getUser()
-        
-        // Handle expected 401 response (user not authenticated)
-        if (response.status === 401 || !response.data) {
-          this.user = null
-          return null
-        }
-        
-        this.user = extractUserFromResponse(response)
-        return this.user
-      } catch (error) {
-        // Handle unexpected errors
-        if (error.response?.status === 401) {
-          this.user = null
-          return null
-        }
+      const request = (async () => {
+        try {
+          const response = await authApi.getUser()
+          // Login/logout or an identity change supersedes this request.
+          if (version !== this.sessionVersion) return this.user
 
-        throw error
-      } finally {
+          const user = response.status === 401 || !response.data
+            ? null : extractUserFromResponse(response)
+          this.setUser(user)
+          return this.user
+        } catch (error) {
+          if (version !== this.sessionVersion) return this.user
+          if (error.response?.status === 401) {
+            this.setUser(null)
+            return null
+          }
+          throw error
+        }
+      })().finally(() => {
         this.initializing = false
-      }
+        userRequests.delete(this)
+      })
+      userRequests.set(this, request)
+      return request
     },
   },
 })
-

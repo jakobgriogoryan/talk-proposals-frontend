@@ -146,7 +146,7 @@ api.interceptors.response.use(
       try {
         const authStore = useAuthStore()
         if (authStore) {
-          authStore.user = null
+          authStore.setUser(null)
         }
       } catch (e) {}
 
