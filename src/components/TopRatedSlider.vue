@@ -29,7 +29,7 @@
     <div class="relative overflow-hidden rounded-xl w-full">
       <div
         ref="sliderContainer"
-        class="flex transition-transform duration-700 ease-in-out"
+        class="flex py-3 transition-transform duration-700 ease-in-out"
         :style="{ 
           transform: `translateX(-${transformValue}%)`
         }"
@@ -296,4 +296,3 @@ onUnmounted(() => {
   overflow: hidden;
 }
 </style>
-

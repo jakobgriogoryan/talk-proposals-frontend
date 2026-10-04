@@ -30,8 +30,8 @@
       <div
         :style="{
           height: `${Math.max(
-            virtualizer.value?.getTotalSize() ?? 0,
-            rowCount * 250
+            virtualizer?.getTotalSize() ?? 0,
+            rowCount * 250 + 32
           )}px`,
           width: '100%',
           position: 'relative',
@@ -177,6 +177,8 @@ const virtualizer = useVirtualizer({
   getScrollElement: () => scrollContainer.value,
   estimateSize: () => 250,
   overscan: 2,
+  paddingStart: 12,
+  paddingEnd: 20,
   enabled: isVirtualizerEnabled,
 })
 
@@ -206,7 +208,7 @@ const visibleRows = computed(() => {
         return Array.from({ length: rowCount.value }, (_, index) => ({
           key: `row-${index}`,
           index,
-          start: index * 250,
+          start: 12 + index * 250,
           size: 250,
           items: getRowItems(index),
         }))
@@ -224,7 +226,7 @@ const visibleRows = computed(() => {
       return Array.from({ length: rowCount.value }, (_, index) => ({
         key: `row-${index}`,
         index,
-        start: index * 250,
+        start: 12 + index * 250,
         size: 250,
         items: getRowItems(index),
       }))
@@ -454,4 +456,3 @@ onUnmounted(() => {
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
 })
 </script>
-

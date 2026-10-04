@@ -4,6 +4,8 @@
       <h1 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 dark:from-ocean-400 dark:to-ocean-300 bg-clip-text text-transparent">My Proposals</h1>
       <router-link
         to="/proposals/new"
+        @mouseenter="preloadNewProposal"
+        @focus="preloadNewProposal"
         class="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 dark:from-ocean-500 dark:to-ocean-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 dark:hover:from-ocean-600 dark:hover:to-ocean-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 text-center text-sm sm:text-base font-medium"
       >
         + New Proposal
@@ -38,8 +40,8 @@
       <div
         :style="{
           height: `${Math.max(
-            virtualizer.value?.getTotalSize() ?? 0,
-            rowCount * 250
+            virtualizer?.getTotalSize() ?? 0,
+            rowCount * 250 + 32
           )}px`,
           width: '100%',
           position: 'relative',
@@ -153,6 +155,12 @@ import ProposalCard from '../components/ProposalCard.vue'
 import ProposalFilters from '../components/ProposalFilters.vue'
 import TopRatedSlider from '../components/TopRatedSlider.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
+import { loadNewProposal } from '../router/newProposal'
+
+const preloadNewProposal = () => {
+  // Background failure must not block this page; navigation can try again.
+  loadNewProposal().catch(() => {})
+}
 
 const proposals = ref([])
 const tags = ref([])
@@ -183,6 +191,8 @@ const virtualizer = useVirtualizer({
   getScrollElement: () => scrollContainer.value,
   estimateSize: () => 250, // Estimated height per row
   overscan: 2,
+  paddingStart: 12,
+  paddingEnd: 20,
   enabled: isVirtualizerEnabled,
 })
 
@@ -214,7 +224,7 @@ const visibleRows = computed(() => {
         return Array.from({ length: rowCount.value }, (_, index) => ({
           key: `row-${index}`,
           index,
-          start: index * 250,
+          start: 12 + index * 250,
           size: 250,
           items: getRowItems(index),
         }))
@@ -232,7 +242,7 @@ const visibleRows = computed(() => {
       return Array.from({ length: rowCount.value }, (_, index) => ({
         key: `row-${index}`,
         index,
-        start: index * 250,
+        start: 12 + index * 250,
         size: 250,
         items: getRowItems(index),
       }))
@@ -430,6 +440,7 @@ const handleDelete = async (id) => {
 }
 
 onMounted(async () => {
+  preloadNewProposal()
   fetchProposals()
   fetchTags()
   
@@ -464,4 +475,3 @@ onUnmounted(() => {
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
 })
 </script>
-
