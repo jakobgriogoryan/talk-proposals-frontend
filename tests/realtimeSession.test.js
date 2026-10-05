@@ -10,36 +10,35 @@ describe('createRealtimeSession', () => {
     vi.useRealTimers()
   })
 
-  it('cancels pending initialization when the user logs out', () => {
+  it('initializes immediately and disconnects on logout without delayed work', () => {
     const initialize = vi.fn()
     const disconnect = vi.fn()
     const session = createRealtimeSession({ initialize, disconnect })
 
     session.sync(1)
+    expect(initialize).toHaveBeenCalledOnce()
+    expect(initialize).toHaveBeenCalledWith(1)
     session.sync(null)
     vi.runAllTimers()
 
-    expect(initialize).not.toHaveBeenCalled()
+    expect(initialize).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
     expect(disconnect).toHaveBeenCalledTimes(2)
   })
 
-  it('initializes only the latest account after an identity change', () => {
+  it('disconnects the old account before immediately initializing its replacement', () => {
     const initialize = vi.fn()
     const disconnect = vi.fn()
     const session = createRealtimeSession({ initialize, disconnect })
 
     session.sync(1)
-    vi.advanceTimersByTime(250)
     session.sync(2)
-    vi.advanceTimersByTime(499)
-    expect(initialize).not.toHaveBeenCalled()
-
-    vi.advanceTimersByTime(1)
-    expect(initialize).toHaveBeenCalledOnce()
-    expect(initialize).toHaveBeenCalledWith(2)
+    expect(initialize.mock.calls).toEqual([[1], [2]])
+    expect(disconnect.mock.invocationCallOrder[1]).toBeLessThan(initialize.mock.invocationCallOrder[1])
+    expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('cancels pending work and disconnects on disposal', () => {
+  it('disconnects on disposal without scheduling any later initialization', () => {
     const initialize = vi.fn()
     const disconnect = vi.fn()
     const session = createRealtimeSession({ initialize, disconnect })
@@ -48,7 +47,8 @@ describe('createRealtimeSession', () => {
     session.dispose()
     vi.runAllTimers()
 
-    expect(initialize).not.toHaveBeenCalled()
+    expect(initialize).toHaveBeenCalledOnce()
+    expect(vi.getTimerCount()).toBe(0)
     expect(disconnect).toHaveBeenCalledTimes(2)
   })
 })

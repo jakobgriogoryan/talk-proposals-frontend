@@ -51,6 +51,28 @@ const mount = component => {
 }
 
 describe.each([['speaker', Proposals], ['reviewer', ReviewProposals], ['admin', AdminProposals]])('%s proposal request ordering', (_name, component) => {
+  it('does not attach late listeners after unmount during asynchronous mount work', async () => {
+    mocks.get.mockResolvedValue(response('Results'))
+    mount(component)
+    const registered = window.addEventListener.mock.calls.length
+    const app = apps.pop()
+    app.unmount()
+    await settle()
+    expect(window.addEventListener).toHaveBeenCalledTimes(registered)
+    for (const [event, callback] of window.addEventListener.mock.calls) {
+      expect(window.removeEventListener).toHaveBeenCalledWith(event, callback)
+    }
+  })
+  it('refreshes authoritative results after subscription or reconnection', async () => {
+    mocks.get.mockResolvedValueOnce(response('Before reconnect')).mockResolvedValueOnce(response('After reconnect'))
+    const root = mount(component)
+    await settle()
+    const listener = window.addEventListener.mock.calls.find(([name]) => name === 'realtime-resynced')[1]
+    listener()
+    await settle()
+    expect(find(root, el => el.text === 'After reconnect')).toBeDefined()
+    expect(mocks.get).toHaveBeenCalledTimes(2)
+  })
   it('refreshes proposal content even when identity, title and status are unchanged', async () => {
     const initial = response('Same title')
     initial.data.data.proposals[0].description = 'Original description'

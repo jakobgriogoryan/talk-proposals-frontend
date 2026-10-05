@@ -15,6 +15,11 @@ const statusColors = {
   pending: 'warning',
 }
 
+const EVENT_RETENTION_MS = 60_000
+const MAX_RECENT_EVENTS = 1000
+const SUBSCRIBED_EVENT = '.pusher:subscription_succeeded'
+const SUBSCRIPTION_ERROR_EVENT = '.pusher:subscription_error'
+
 /**
  * Owns every Echo subscription created by one consumer so it can remove the
  * exact callbacks and leave the corresponding private channels.
@@ -25,31 +30,51 @@ export function useRealtime() {
   const cacheStore = useCacheStore()
   const channels = new Map()
   const recentlyHandledEvents = new Map()
+  let stopConnectionWatch = null
 
-  const eventKey = (eventName, data) => {
-    const proposalId = data.proposal_id ?? data.proposal?.id ?? 'unknown'
-    const detail = data.review?.id ?? data.new_status ?? ''
-
-    return `${eventName}:${proposalId}:${detail}`
+  const watchConnection = () => {
+    const connection = echo.connector?.pusher?.connection
+    if (!connection || stopConnectionWatch) return
+    const userId = authStore.user?.id
+    let warned = false
+    const onStateChanged = ({ current }) => {
+      if (!channels.size || authStore.user?.id !== userId) return
+      if (current === 'connected') warned = false
+      if (['unavailable', 'failed'].includes(current) && !warned) {
+        warned = true
+        notificationsStore.push('Live updates are disconnected. Data will refresh when the connection returns.', 'warning', 8000)
+      }
+    }
+    connection.bind('state_change', onStateChanged)
+    stopConnectionWatch = () => connection.unbind('state_change', onStateChanged)
   }
 
   const handleOnce = (eventName, data, handler) => {
+    // Older queued payloads have no identity. Prefer duplicate handling over
+    // incorrectly dropping a genuine change during a rolling deployment.
+    if (!data.event_id) {
+      handler()
+      return
+    }
     const now = Date.now()
 
     for (const [key, handledAt] of recentlyHandledEvents) {
-      if (now - handledAt > 5000) {
+      if (now - handledAt > EVENT_RETENTION_MS) {
         recentlyHandledEvents.delete(key)
       }
     }
 
-    const key = eventKey(eventName, data)
+    const key = `${eventName}:${data.event_id}`
     const handledAt = recentlyHandledEvents.get(key)
 
-    if (handledAt && now - handledAt <= 5000) {
+    if (handledAt !== undefined && now - handledAt <= EVENT_RETENTION_MS) {
       return
     }
 
     recentlyHandledEvents.set(key, now)
+    if (recentlyHandledEvents.size > MAX_RECENT_EVENTS) {
+      recentlyHandledEvents.delete(recentlyHandledEvents.keys().next().value)
+    }
     handler()
   }
 
@@ -66,24 +91,49 @@ export function useRealtime() {
 
     echo.leave(channelName)
     channels.delete(channelName)
+    if (channels.size === 0) {
+      stopConnectionWatch?.()
+      stopConnectionWatch = null
+    }
   }
 
-  const subscribe = (channelName, listeners) => {
+  const subscribe = (channelName, listeners, onSubscribed = null) => {
     stopChannel(channelName)
 
     const channel = echo.private(channelName)
+    watchConnection()
     const registeredListeners = new Map()
+    const userId = authStore.user?.id
+    const registration = { channel, listeners: registeredListeners }
+    channels.set(channelName, registration)
+    const isCurrent = () => channels.get(channelName) === registration && authStore.user?.id === userId
+    let subscriptionFailed = false
 
-    Object.entries(listeners).forEach(([eventName, callback]) => {
+    // Bind lifecycle events directly so their exact callbacks can be removed.
+    const lifecycleListeners = {
+      [SUBSCRIBED_EVENT]: () => {
+        if (!isCurrent()) return
+        subscriptionFailed = false
+        onSubscribed?.()
+      },
+      [SUBSCRIPTION_ERROR_EVENT]: () => {
+        if (!isCurrent() || subscriptionFailed) return
+        subscriptionFailed = true
+        notificationsStore.push('Live updates are unavailable. Refresh the page to see the latest data.', 'warning', 8000)
+      },
+    }
+
+    Object.entries({ ...listeners, ...lifecycleListeners }).forEach(([eventName, callback]) => {
       if (typeof callback !== 'function') {
         return
       }
 
-      channel.listen(eventName, callback)
-      registeredListeners.set(eventName, callback)
+      const guardedCallback = data => {
+        if (isCurrent()) callback(data)
+      }
+      channel.listen(eventName, guardedCallback)
+      registeredListeners.set(eventName, guardedCallback)
     })
-
-    channels.set(channelName, { channel, listeners: registeredListeners })
 
     return () => stopChannel(channelName, channel)
   }
@@ -98,6 +148,12 @@ export function useRealtime() {
     invalidateProposalCaches(data)
     if (eventName === 'proposal-submitted') cacheStore.invalidatePrefix('tags:')
     window.dispatchEvent(new CustomEvent(eventName, { detail: data }))
+  }
+
+  const resync = () => {
+    invalidateProposalCaches({})
+    cacheStore.invalidatePrefix('tags:')
+    window.dispatchEvent(new CustomEvent('realtime-resynced'))
   }
 
   const handleSubmitted = (data, ownerMessage = false) => {
@@ -154,7 +210,7 @@ export function useRealtime() {
         [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data),
         [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data),
         [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data),
-      })
+      }, resync)
     }
 
     if (authStore.user?.id) {
@@ -162,7 +218,7 @@ export function useRealtime() {
         [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data, true),
         [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data, true),
         [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data, true),
-      })
+      }, resync)
     }
   }
 
@@ -183,7 +239,10 @@ export function useRealtime() {
         }
       }
     }
-    return subscribe(`proposals.${proposalId}`, listeners)
+    return subscribe(`proposals.${proposalId}`, listeners, () => {
+      invalidateProposalCaches({ proposal_id: proposalId })
+      callbacks.onResynced?.()
+    })
   }
 
   return {

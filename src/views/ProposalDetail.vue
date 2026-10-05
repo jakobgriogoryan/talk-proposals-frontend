@@ -468,6 +468,7 @@ const subscribeToProposal = (proposalId) => {
   }
 
   stopProposalRealtime = listenToProposal(proposalId, {
+    onResynced: () => fetchProposal(),
     onReviewed: () => {
       fetchReviews()
     },

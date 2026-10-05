@@ -30,6 +30,20 @@ afterEach(() => { apps.splice(0).forEach(app => app.unmount()); vi.unstubAllGlob
 const response = id => ({ data: { data: { proposal: { id, title: `Proposal ${id}`, status: 'pending', tags: [], user: {} } } } })
 
 describe('proposal navigation request ordering', () => {
+  it('reloads proposal and reviews when its private channel resubscribes', async () => {
+    mocks.getOne.mockResolvedValue(response('1'))
+    const root = node('root'), app = renderer.createApp(ProposalDetail)
+    app.mount(root); apps.push(app)
+    await settle()
+    const updated = response('1')
+    updated.data.data.proposal.title = 'Current server state'
+    mocks.getOne.mockResolvedValue(updated)
+    mocks.listen.mock.calls[0][1].onResynced()
+    await settle()
+    expect(mocks.getOne).toHaveBeenCalledTimes(2)
+    expect(mocks.getReviews).toHaveBeenCalledTimes(2)
+    expect(find(root, el => el.type === 'h1').text).toBe('Current server state')
+  })
   it.each(['resolve', 'reject'])('ignores an older request that finishes with %s after navigation', async result => {
     const old = deferred()
     mocks.getOne.mockImplementation(id => id === '1' ? old.promise : Promise.resolve(response(id)))

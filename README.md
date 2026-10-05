@@ -131,6 +131,19 @@ refresh. Status events reload the authoritative filtered list instead of merging
 partial broadcast payloads; the top-rated slider refreshes on proposal events and
 cleans up its listeners, requests, and timers on unmount.
 
+Subscriptions start immediately when the authenticated identity changes. Initial
+subscription success and resubscription after a connection loss invalidate cached
+data and refresh visible proposal lists, details/reviews, and top-rated results.
+Private-channel authorization failures and unavailable connections show a warning; all lifecycle callbacks
+are removed on logout, route changes, or unmount. This reconciles current state;
+it does not replay notifications missed while disconnected.
+
+Broadcasts are deduplicated by the backend's stable `event_id`, retained for one
+minute in a bounded in-memory set. Genuine repeated status transitions are not
+suppressed. Older queued events without an ID are still handled, accepting
+possible duplicate notifications during a rolling deployment rather than losing
+updates. Deploy the backend event fields first and restart its queue workers.
+
 Both proposal details and the edit form download PDFs through the authenticated
 API via `src/utils/proposalDownload.js`. Resource `file_path` values are not used
 as direct browser links. Blob error responses are displayed rather than downloaded,

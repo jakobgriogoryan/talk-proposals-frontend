@@ -180,11 +180,13 @@ onMounted(() => {
   window.addEventListener('proposal-submitted', handleProposalSubmitted)
   window.addEventListener('proposal-reviewed', handleProposalReviewed)
   window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.addEventListener('realtime-resynced', handleProposalStatusChanged)
 })
 
 onUnmounted(() => {
   window.removeEventListener('proposal-submitted', handleProposalSubmitted)
   window.removeEventListener('proposal-reviewed', handleProposalReviewed)
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.removeEventListener('realtime-resynced', handleProposalStatusChanged)
 })
 </script>

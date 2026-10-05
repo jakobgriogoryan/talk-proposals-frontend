@@ -92,11 +92,15 @@ describe('useRealtime', () => {
       REALTIME_EVENTS.submitted,
       REALTIME_EVENTS.reviewed,
       REALTIME_EVENTS.statusChanged,
+      '.pusher:subscription_succeeded',
+      '.pusher:subscription_error',
     ])
     expect(Array.from(latestChannel('user.22').listeners.keys())).toEqual([
       REALTIME_EVENTS.submitted,
       REALTIME_EVENTS.reviewed,
       REALTIME_EVENTS.statusChanged,
+      '.pusher:subscription_succeeded',
+      '.pusher:subscription_error',
     ])
     expect(REALTIME_EVENTS.statusChanged).toBe('.proposal.status.changed')
   })
@@ -111,8 +115,8 @@ describe('useRealtime', () => {
 
     realtime.initialize()
 
-    expect(firstSharedChannel.stopListening).toHaveBeenCalledTimes(3)
-    expect(firstUserChannel.stopListening).toHaveBeenCalledTimes(3)
+    expect(firstSharedChannel.stopListening).toHaveBeenCalledTimes(5)
+    expect(firstUserChannel.stopListening).toHaveBeenCalledTimes(5)
     firstSharedChannel.listeners.forEach((callback, eventName) => {
       expect(firstSharedChannel.stopListening).toHaveBeenCalledWith(eventName, callback)
     })
@@ -162,6 +166,7 @@ describe('useRealtime', () => {
     const push = vi.spyOn(notificationsStore, 'push')
     const realtime = useRealtime()
     const payload = {
+      event_id: 'status-event-1',
       proposal_id: 7,
       proposal: { id: 7, title: 'A safer proposal' },
       new_status: 'approved',
@@ -177,5 +182,113 @@ describe('useRealtime', () => {
     realtime.disconnect()
     vi.clearAllTimers()
     vi.useRealTimers()
+  })
+
+  it('delivers genuine repeated status changes without waiting five seconds', () => {
+    vi.useFakeTimers()
+    useAuthStore().user = { id: 55, role: 'reviewer' }
+    useRealtime().initialize()
+    const listener = latestChannel('proposals').listeners.get(REALTIME_EVENTS.statusChanged)
+    ;['approved', 'rejected', 'approved'].forEach((status, index) => {
+      listener({ event_id: `change-${index}`, proposal_id: 7, new_status: status, message: status })
+    })
+    expect(window.dispatchEvent.mock.calls.map(([event]) => event.detail.new_status))
+      .toEqual(['approved', 'rejected', 'approved'])
+  })
+
+  it('does not suppress legacy events whose identity cannot be proven', () => {
+    vi.useFakeTimers()
+    useAuthStore().user = { id: 55, role: 'reviewer' }
+    useRealtime().initialize()
+    const listener = latestChannel('proposals').listeners.get(REALTIME_EVENTS.statusChanged)
+    const payload = { proposal_id: 7, new_status: 'approved', message: 'Changed' }
+    listener(payload)
+    listener(payload)
+    expect(window.dispatchEvent).toHaveBeenCalledTimes(2)
+  })
+
+  it('resynchronizes stale caches on initial subscription and reconnection without a toast', () => {
+    useAuthStore().user = { id: 55, role: 'reviewer' }
+    const cache = useCacheStore()
+    const push = vi.spyOn(useNotificationsStore(), 'push')
+    const realtime = useRealtime()
+    realtime.initialize()
+    const ready = latestChannel('proposals').listeners.get('.pusher:subscription_succeeded')
+    for (let reconnect = 0; reconnect < 2; reconnect++) {
+      cache.set('proposals:one:7', { stale: true })
+      cache.set('reviews:proposal:7:{}', { stale: true })
+      ready()
+      expect(cache.has('proposals:one:7')).toBe(false)
+      expect(cache.has('reviews:proposal:7:{}')).toBe(false)
+    }
+    expect(window.dispatchEvent.mock.calls.map(([event]) => event.type))
+      .toEqual(['realtime-resynced', 'realtime-resynced'])
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  it('ignores late lifecycle callbacks after logout or subscription replacement', () => {
+    const auth = useAuthStore()
+    auth.user = { id: 55, role: 'reviewer' }
+    const push = vi.spyOn(useNotificationsStore(), 'push')
+    const realtime = useRealtime()
+    realtime.initialize()
+    const old = latestChannel('proposals')
+    realtime.initialize()
+    old.listeners.get('.pusher:subscription_succeeded')()
+    old.listeners.get('.pusher:subscription_error')()
+    const current = latestChannel('proposals')
+    auth.user = null
+    current.listeners.get('.pusher:subscription_succeeded')()
+    current.listeners.get('.pusher:subscription_error')()
+    expect(window.dispatchEvent).not.toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+    realtime.disconnect()
+  })
+
+  it('reports subscription failure once until a successful resubscription', () => {
+    useAuthStore().user = { id: 55, role: 'speaker' }
+    const push = vi.spyOn(useNotificationsStore(), 'push')
+    useRealtime().initialize()
+    const channel = latestChannel('user.55')
+    const error = channel.listeners.get('.pusher:subscription_error')
+    error(); error()
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenLastCalledWith(expect.stringContaining('Live updates'), 'warning', 8000)
+    channel.listeners.get('.pusher:subscription_succeeded')()
+    error()
+    expect(push).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates detail caches before scoped resynchronization and cleans lifecycle callbacks', () => {
+    useAuthStore().user = { id: 55, role: 'speaker' }
+    const cache = useCacheStore()
+    const onResynced = vi.fn(() => expect(cache.has('proposals:one:7')).toBe(false))
+    const stop = useRealtime().listenToProposal(7, { onResynced })
+    const channel = latestChannel('proposals.7')
+    cache.set('proposals:one:7', { stale: true })
+    channel.listeners.get('.pusher:subscription_succeeded')()
+    expect(onResynced).toHaveBeenCalledOnce()
+    stop()
+    channel.listeners.get('.pusher:subscription_succeeded')()
+    expect(onResynced).toHaveBeenCalledOnce()
+    expect(channel.stopListening).toHaveBeenCalledWith('.pusher:subscription_succeeded', expect.any(Function))
+    expect(channel.stopListening).toHaveBeenCalledWith('.pusher:subscription_error', expect.any(Function))
+  })
+
+  it('deduplicates delayed overlapping delivery and expires bounded event identities', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    useAuthStore().user = { id: 55, role: 'reviewer' }
+    useRealtime().initialize()
+    const shared = latestChannel('proposals').listeners.get(REALTIME_EVENTS.statusChanged)
+    const own = latestChannel('user.55').listeners.get(REALTIME_EVENTS.statusChanged)
+    const payload = { event_id: 'same', new_status: 'approved', message: 'Changed' }
+    shared(payload)
+    vi.advanceTimersByTime(10_000)
+    own(payload)
+    expect(window.dispatchEvent).toHaveBeenCalledOnce()
+    vi.advanceTimersByTime(60_000)
+    shared(payload)
+    expect(window.dispatchEvent).toHaveBeenCalledTimes(2)
   })
 })

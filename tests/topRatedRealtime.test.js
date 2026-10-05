@@ -30,7 +30,7 @@ const mount = () => {
 }
 
 describe('top-rated realtime refresh', () => {
-  it.each(['proposal-submitted', 'proposal-reviewed', 'proposal-status-changed'])('refreshes visible ratings after %s', async event => {
+  it.each(['proposal-submitted', 'proposal-reviewed', 'proposal-status-changed', 'realtime-resynced'])('refreshes visible ratings after %s', async event => {
     mocks.get.mockResolvedValueOnce(response('Original')).mockResolvedValueOnce(response('Updated'))
     const {root} = mount()
     await settle()

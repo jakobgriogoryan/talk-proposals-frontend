@@ -116,7 +116,7 @@ const slidesPerView = ref(1) // Will be updated based on screen size
 const sliderContainer = ref(null)
 let requestVersion = 0
 let resumeTimeout = null
-const proposalEvents = ['proposal-submitted', 'proposal-reviewed', 'proposal-status-changed']
+const proposalEvents = ['proposal-submitted', 'proposal-reviewed', 'proposal-status-changed', 'realtime-resynced']
 
 // Touch/swipe handling
 const touchStartX = ref(0)

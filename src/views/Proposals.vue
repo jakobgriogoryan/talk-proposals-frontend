@@ -296,6 +296,9 @@ const handleDelete = async (id) => {
 }
 
 onMounted(async () => {
+  window.addEventListener('proposal-submitted', handleProposalSubmitted)
+  window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.addEventListener('realtime-resynced', handleProposalStatusChanged)
   preloadNewProposal()
   fetchProposals()
   fetchTags()
@@ -319,15 +322,12 @@ onMounted(async () => {
       // Ignore initialization errors
     }
   }
-  
-  // Listen to real-time events
-  window.addEventListener('proposal-submitted', handleProposalSubmitted)
-  window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
 })
 
 onUnmounted(() => {
   // Clean up event listeners
   window.removeEventListener('proposal-submitted', handleProposalSubmitted)
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.removeEventListener('realtime-resynced', handleProposalStatusChanged)
 })
 </script>
