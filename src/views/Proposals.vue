@@ -63,7 +63,6 @@
             <ProposalCard
               v-for="proposal in virtualRow.items"
               :key="proposal.id"
-              v-memo="[proposal.id, proposal.status, proposal.title]"
               :proposal="proposal"
               :show-actions="true"
               @delete="handleDelete"
@@ -268,12 +267,12 @@ watch([() => proposals.value.length, columns, scrollContainer], async () => {
 }, { immediate: false })
 
 // Real-time event handlers
-const handleProposalSubmitted = (event) => {
+const handleProposalSubmitted = () => {
   // Refresh proposals list when a new proposal is submitted
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalStatusChanged = (event) => {
+const handleProposalStatusChanged = () => {
   // Broadcast payloads are partial; reload to honor the active filters.
   fetchProposals(pagination.value?.current_page || 1)
 }

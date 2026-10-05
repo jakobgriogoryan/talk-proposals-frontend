@@ -186,10 +186,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useNotificationsStore } from '../stores/notifications'
 import { useRealtime } from '../composables/useRealtime'
 import { proposalsApi, reviewsApi } from '../api'
-import api from '../api/axios'
 import ReviewForm from '../components/ReviewForm.vue'
 import ReviewList from '../components/ReviewList.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
@@ -199,7 +197,6 @@ import { downloadProposalFile, proposalDownloadError } from '../utils/proposalDo
 
 const route = useRoute()
 const authStore = useAuthStore()
-const notificationsStore = useNotificationsStore()
 const proposal = ref(null)
 const reviews = ref([])
 const loading = ref(true)
@@ -252,7 +249,7 @@ const fetchProposal = async () => {
     // Fetch proposal and reviews in parallel for better performance
     const [proposalResponse, reviewsResponse] = await Promise.all([
       proposalsApi.getOne(proposalId),
-      reviewsApi.getForProposal(proposalId).catch(err => {
+      reviewsApi.getForProposal(proposalId).catch(() => {
         // If reviews fail, just log and continue
         return { data: { data: { reviews: [] } } }
       })

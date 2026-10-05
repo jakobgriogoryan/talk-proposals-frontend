@@ -161,3 +161,38 @@ Frontend tests exist under `tests/` and use Vitest with a Vue custom renderer.
 Run `npm test` for unit/component regressions and `npm run build` for compilation.
 These are not browser end-to-end tests; keep the manual checks above for native
 file dialogs, downloads and dropdown behavior.
+
+## Continuous integration and quality checks
+
+`.github/workflows/ci.yml` runs on pull requests, pushes to `main`, and manual
+dispatch. The `Frontend quality` check uses Node 22, locked dependencies and no
+private environment values or running backend. Use Node 22.13+ locally (or a
+compatible version listed in `package.json`) for ESLint 10.
+
+```sh
+npm ci
+npm run lint
+npm test
+npm run build
+npm audit --omit=dev --audit-level=high
+```
+
+ESLint checks JavaScript and Vue correctness, including tests and configuration;
+warnings fail CI. `npm run lint:fix` applies supported automatic fixes. Component
+names retain the existing route-based convention; formatting-only Vue rules are
+not enabled. Tests are unit/component regressions, not browser end-to-end tests.
+
+Actions are pinned to verified release commits, credentials are not persisted,
+and permissions are read-only. Checks continue after an earlier check fails,
+without suppressing job failures. After publishing, configure branch protection
+to require `Frontend quality`. No branch protection changes or deployment are
+performed by this workflow.
+
+The security gate covers production dependencies. A full `npm audit` currently
+also reports a build-tool advisory through Tailwind 3's `braces` dependency
+([GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)).
+Do not run `npm audit fix --force`: npm proposes a Tailwind 4 migration that can
+break the current styling. Resolving the development dependency advisory needs
+a separately verified tooling update; this is not a claim that the full dependency
+tree is advisory-free. Automatic deployment is deferred until a target and
+rollback strategy are agreed.

@@ -140,15 +140,15 @@ const { proposals, loading, filters, pagination, fetchProposals, updateFilters,
   goToPage, paginationPages, paginationInfo } = useProposalList(proposalsApi.getAllForAdmin)
 
 // Real-time event handlers
-const handleProposalSubmitted = (event) => {
+const handleProposalSubmitted = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalReviewed = (event) => {
+const handleProposalReviewed = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalStatusChanged = (event) => {
+const handleProposalStatusChanged = () => {
   // Broadcast payloads are partial; reload to honor the active filters.
   fetchProposals(pagination.value?.current_page || 1)
 }
@@ -170,12 +170,6 @@ const updateStatus = async (id, status) => {
   } catch (error) {
     // Toast will be shown automatically by axios interceptor
   }
-}
-
-const getStatusClass = (status) => {
-  if (status === 'approved') return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-  if (status === 'rejected') return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
 }
 
 onMounted(() => {

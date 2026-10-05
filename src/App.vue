@@ -19,7 +19,7 @@ import Navigation from './components/Navigation.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
+useThemeStore()
 const { initialize, disconnect } = useRealtime()
 const realtimeSession = createRealtimeSession({
   disconnect,

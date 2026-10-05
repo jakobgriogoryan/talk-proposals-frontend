@@ -21,7 +21,7 @@ const echo = new Echo(key ? {
     },
   },
   // Use axios instance for authentication requests
-  authorizer: (channel, options) => {
+  authorizer: (channel) => {
     return {
       authorize: (socketId, callback) => {
         api.post('/broadcasting/auth', {

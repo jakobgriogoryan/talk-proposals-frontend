@@ -23,7 +23,9 @@ vi.mock('../src/components/AppSelect.vue', () => ({ default: {
   emits: ['change'], setup(props, { emit }) { return () => h('button', { 'data-testid': 'status', onClick: () => emit('change', 'approved') }, 'Approve') },
 } }))
 vi.mock('../src/components/ProposalCard.vue', () => ({ default: {
-  props: ['proposal'], setup: props => () => h('h3', props.proposal.title),
+  props: ['proposal'], setup: props => () => h('section', [
+    h('h3', props.proposal.title), h('p', props.proposal.description),
+  ]),
 } }))
 vi.mock('../src/components/SkeletonLoader.vue', () => ({ default: { render: () => h('div', { 'data-testid': 'loading' }) } }))
 import Proposals from '../src/views/Proposals.vue'
@@ -49,6 +51,25 @@ const mount = component => {
 }
 
 describe.each([['speaker', Proposals], ['reviewer', ReviewProposals], ['admin', AdminProposals]])('%s proposal request ordering', (_name, component) => {
+  it('refreshes proposal content even when identity, title and status are unchanged', async () => {
+    const initial = response('Same title')
+    initial.data.data.proposals[0].description = 'Original description'
+    mocks.get.mockResolvedValueOnce(initial)
+    const root = mount(component)
+    await settle()
+    expect(find(root, el => el.text === 'Original description')).toBeDefined()
+
+    const updated = response('Same title')
+    updated.data.data.proposals[0].description = 'Updated description'
+    mocks.get.mockResolvedValueOnce(updated)
+    const listener = window.addEventListener.mock.calls.find(([name]) => name === 'proposal-status-changed')[1]
+    listener()
+    await settle()
+
+    expect(find(root, el => el.text === 'Updated description')).toBeDefined()
+    expect(find(root, el => el.text === 'Original description')).toBeUndefined()
+  })
+
   it('keeps the controlled filters in sync with the serialized request', async () => {
     mocks.get.mockResolvedValue(response('Results'))
     const root = mount(component)

@@ -11,6 +11,8 @@
 - Development: `npm run dev`
 - Production build: `npm run build`
 - Tests: `npm test`
+- Lint: `npm run lint`; apply safe automatic fixes with `npm run lint:fix`.
+- CI runtime: Node 22 (at least 22.13 for ESLint 10); install reproducibly with `npm ci`.
 
 ## Architecture and Boundaries
 
@@ -29,5 +31,6 @@
 ## Verification
 
 - Add focused tests when changing lifecycle or authorization-sensitive client behavior.
-- Run the available focused tests, `npm run build`, and `git diff --check`.
+- Run the available focused tests, `npm test`, `npm run lint`, `npm run build`, and `git diff --check`.
+- `.github/workflows/ci.yml` checks PRs and main without real credentials or an API server; it does not deploy.
 - Inspect the repository diff and status before committing.

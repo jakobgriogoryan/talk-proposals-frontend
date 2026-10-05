@@ -110,7 +110,6 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useAuthRedirect } from '../composables/useAuthRedirect'
 import AppSelect from '../components/AppSelect.vue'

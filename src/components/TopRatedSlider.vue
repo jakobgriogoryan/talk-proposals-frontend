@@ -38,7 +38,7 @@
         @touchend="handleTouchEnd"
       >
         <div
-          v-for="(proposal, index) in proposals"
+          v-for="proposal in proposals"
           :key="proposal.id"
           class="flex-shrink-0 px-2 sm:px-3"
           :style="{ width: slideWidth }"

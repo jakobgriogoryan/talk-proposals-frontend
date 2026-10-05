@@ -53,7 +53,6 @@
             <div
               v-for="proposal in virtualRow.items"
               :key="proposal.id"
-              v-memo="[proposal.id, proposal.status, proposal.title]"
               @click="goToDetail(proposal.id)"
               class="cursor-pointer"
             >
@@ -253,15 +252,15 @@ watch([() => proposals.value.length, columns, scrollContainer], async () => {
 }, { immediate: false })
 
 // Real-time event handlers
-const handleProposalSubmitted = (event) => {
+const handleProposalSubmitted = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalReviewed = (event) => {
+const handleProposalReviewed = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalStatusChanged = (event) => {
+const handleProposalStatusChanged = () => {
   // Broadcast payloads are partial; reload to honor the active filters.
   fetchProposals(pagination.value?.current_page || 1)
 }

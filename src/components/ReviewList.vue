@@ -163,7 +163,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['edit'])
+defineEmits(['edit'])
 
 const authStore = useAuthStore()
 const isAdmin = authStore.isAdmin
