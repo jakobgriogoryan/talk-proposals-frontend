@@ -30,6 +30,19 @@ afterEach(() => { apps.splice(0).forEach(app => app.unmount()); vi.unstubAllGlob
 const response = id => ({ data: { data: { proposal: { id, title: `Proposal ${id}`, status: 'pending', tags: [], user: {} } } } })
 
 describe('proposal navigation request ordering', () => {
+  it('refetches authoritative state instead of applying a late status snapshot', async () => {
+    const current = response('1')
+    current.data.data.proposal.status = 'rejected'
+    mocks.getOne.mockResolvedValue(current)
+    const root = node('root'), app = renderer.createApp(ProposalDetail)
+    app.mount(root); apps.push(app)
+    await settle()
+    mocks.listen.mock.calls[0][1].onStatusChanged({ proposal_id: 1, new_status: 'approved', proposal: { id: 1, status: 'approved' } })
+    await settle()
+    expect(mocks.getOne).toHaveBeenCalledTimes(2)
+    expect(find(root, el => el.type === 'span' && el.text === 'rejected')).toBeDefined()
+    expect(find(root, el => el.type === 'span' && el.text === 'approved')).toBeUndefined()
+  })
   it('reloads proposal and reviews when its private channel resubscribes', async () => {
     mocks.getOne.mockResolvedValue(response('1'))
     const root = node('root'), app = renderer.createApp(ProposalDetail)

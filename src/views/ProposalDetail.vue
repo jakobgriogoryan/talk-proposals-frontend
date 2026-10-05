@@ -218,6 +218,9 @@ const { listenToProposal } = useRealtime()
 let stopProposalRealtime = () => {}
 let proposalRequest = 0
 let reviewsRequest = 0
+let refreshQueued = false
+let disposed = false
+let deletedProposalId = null
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -240,6 +243,7 @@ const currentUserReview = computed(() => {
 })
 
 const fetchProposal = async () => {
+  if (disposed || deletedProposalId === String(route.params.id)) return
   const request = ++proposalRequest
   const proposalId = String(route.params.id)
   const reviewRequest = ++reviewsRequest
@@ -435,29 +439,37 @@ const fetchRatingOptions = async () => {
   }
 }
 
-// Handle status changes from global events
-const handleStatusChanged = (event) => {
-  const data = event.detail
-  if (
-    proposal.value
-    && (
-      String(proposal.value.id) === String(data.proposal_id)
-      || String(proposal.value.id) === String(data.proposal?.id)
-    )
-  ) {
-    // Update the entire proposal object with the new data
-    if (data.proposal) {
-      proposal.value = {
-        ...(proposal.value || {}),
-        ...data.proposal,
-        status: data.new_status,
-      }
-    } else if (proposal.value) {
-      proposal.value.status = data.new_status
-    }
-    status.value = data.new_status
-  }
+// Events are invalidation signals, not authoritative snapshots. Coalesce the
+// global and scoped channel copies; existing request versions reject old reads.
+const refreshCurrentProposal = () => {
+  if (refreshQueued || disposed) return
+  const proposalId = String(route.params.id)
+  refreshQueued = true
+  queueMicrotask(() => {
+    refreshQueued = false
+    if (!disposed && proposalId === String(route.params.id)) fetchProposal()
+  })
 }
+
+const matchesCurrentProposal = data => String(data.proposal_id ?? data.proposal?.id) === String(route.params.id)
+
+const handleProposalDeleted = data => {
+  if (!matchesCurrentProposal(data)) return
+  deletedProposalId = String(route.params.id)
+  proposalRequest++
+  reviewsRequest++
+  proposal.value = null
+  reviews.value = []
+  loading.value = false
+  error.value = 'This proposal has been deleted.'
+  cancelEditReview()
+  stopProposalRealtime()
+}
+
+const handleProposalChanged = event => {
+  if (matchesCurrentProposal(event.detail)) refreshCurrentProposal()
+}
+const handleGlobalDeletion = event => handleProposalDeleted(event.detail)
 
 const subscribeToProposal = (proposalId) => {
   stopProposalRealtime()
@@ -468,20 +480,12 @@ const subscribeToProposal = (proposalId) => {
   }
 
   stopProposalRealtime = listenToProposal(proposalId, {
-    onResynced: () => fetchProposal(),
-    onReviewed: () => {
-      fetchReviews()
-    },
-    onStatusChanged: (data) => {
-      if (proposal.value && String(proposal.value.id) === String(data.proposal_id)) {
-        proposal.value = {
-          ...proposal.value,
-          ...data.proposal,
-          status: data.new_status,
-        }
-        status.value = data.new_status
-      }
-    },
+    onResynced: refreshCurrentProposal,
+    onReviewed: refreshCurrentProposal,
+    onReviewUpdated: refreshCurrentProposal,
+    onStatusChanged: refreshCurrentProposal,
+    onUpdated: refreshCurrentProposal,
+    onDeleted: handleProposalDeleted,
   })
 }
 
@@ -491,7 +495,10 @@ onMounted(() => {
   subscribeToProposal(route.params.id)
   
   // Also listen to global events for status changes
-  window.addEventListener('proposal-status-changed', handleStatusChanged)
+  window.addEventListener('proposal-status-changed', handleProposalChanged)
+  window.addEventListener('proposal-updated', handleProposalChanged)
+  window.addEventListener('review-updated', handleProposalChanged)
+  window.addEventListener('proposal-deleted', handleGlobalDeletion)
 })
 
 watch(
@@ -501,6 +508,7 @@ watch(
       return
     }
 
+    deletedProposalId = null
     subscribeToProposal(proposalId)
     reviews.value = []
     cancelEditReview()
@@ -509,9 +517,13 @@ watch(
 )
 
 onUnmounted(() => {
+  disposed = true
   proposalRequest++
   reviewsRequest++
   stopProposalRealtime()
-  window.removeEventListener('proposal-status-changed', handleStatusChanged)
+  window.removeEventListener('proposal-status-changed', handleProposalChanged)
+  window.removeEventListener('proposal-updated', handleProposalChanged)
+  window.removeEventListener('review-updated', handleProposalChanged)
+  window.removeEventListener('proposal-deleted', handleGlobalDeletion)
 })
 </script>

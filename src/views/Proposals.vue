@@ -299,6 +299,9 @@ onMounted(async () => {
   window.addEventListener('proposal-submitted', handleProposalSubmitted)
   window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
   window.addEventListener('realtime-resynced', handleProposalStatusChanged)
+  window.addEventListener('proposal-updated', handleProposalStatusChanged)
+  window.addEventListener('proposal-deleted', handleProposalStatusChanged)
+  window.addEventListener('review-updated', handleProposalStatusChanged)
   preloadNewProposal()
   fetchProposals()
   fetchTags()
@@ -329,5 +332,8 @@ onUnmounted(() => {
   window.removeEventListener('proposal-submitted', handleProposalSubmitted)
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
   window.removeEventListener('realtime-resynced', handleProposalStatusChanged)
+  window.removeEventListener('proposal-updated', handleProposalStatusChanged)
+  window.removeEventListener('proposal-deleted', handleProposalStatusChanged)
+  window.removeEventListener('review-updated', handleProposalStatusChanged)
 })
 </script>

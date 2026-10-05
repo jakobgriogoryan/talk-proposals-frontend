@@ -7,6 +7,9 @@ export const REALTIME_EVENTS = Object.freeze({
   submitted: '.proposal.submitted',
   reviewed: '.proposal.reviewed',
   statusChanged: '.proposal.status.changed',
+  updated: '.proposal.updated',
+  deleted: '.proposal.deleted',
+  reviewUpdated: '.review.updated',
 })
 
 const statusColors = {
@@ -146,7 +149,7 @@ export function useRealtime() {
 
   const dispatch = (eventName, data) => {
     invalidateProposalCaches(data)
-    if (eventName === 'proposal-submitted') cacheStore.invalidatePrefix('tags:')
+    if (['proposal-submitted', 'proposal-updated'].includes(eventName)) cacheStore.invalidatePrefix('tags:')
     window.dispatchEvent(new CustomEvent(eventName, { detail: data }))
   }
 
@@ -205,8 +208,16 @@ export function useRealtime() {
       return
     }
 
+    // Edits invalidate state without pretending they are new submissions/reviews.
+    const changeListeners = {
+      [REALTIME_EVENTS.updated]: data => handleOnce(REALTIME_EVENTS.updated, data, () => dispatch('proposal-updated', data)),
+      [REALTIME_EVENTS.deleted]: data => handleOnce(REALTIME_EVENTS.deleted, data, () => dispatch('proposal-deleted', data)),
+      [REALTIME_EVENTS.reviewUpdated]: data => handleOnce(REALTIME_EVENTS.reviewUpdated, data, () => dispatch('review-updated', data)),
+    }
+
     if (authStore.isReviewer) {
       subscribe('proposals', {
+        ...changeListeners,
         [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data),
         [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data),
         [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data),
@@ -215,6 +226,7 @@ export function useRealtime() {
 
     if (authStore.user?.id) {
       subscribe(`user.${authStore.user.id}`, {
+        ...changeListeners,
         [REALTIME_EVENTS.submitted]: (data) => handleSubmitted(data, true),
         [REALTIME_EVENTS.reviewed]: (data) => handleReviewed(data, true),
         [REALTIME_EVENTS.statusChanged]: (data) => handleStatusChanged(data, true),
@@ -231,6 +243,9 @@ export function useRealtime() {
     for (const [eventName, callback] of [
       [REALTIME_EVENTS.reviewed, callbacks.onReviewed],
       [REALTIME_EVENTS.statusChanged, callbacks.onStatusChanged],
+      [REALTIME_EVENTS.updated, callbacks.onUpdated],
+      [REALTIME_EVENTS.deleted, callbacks.onDeleted],
+      [REALTIME_EVENTS.reviewUpdated, callbacks.onReviewUpdated],
     ]) {
       if (typeof callback === 'function') {
         listeners[eventName] = data => {
