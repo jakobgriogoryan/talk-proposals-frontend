@@ -27,6 +27,24 @@ afterEach(() => {
 })
 
 describe('shared dropdown controls', () => {
+  it('keeps compact status controls small while preserving mobile targets and status changes', () => {
+    const change = vi.fn()
+    const root = mount({ render: () => h(AppSelect, {
+      modelValue: 'pending', compact: true, 'aria-label': 'Proposal status',
+      options: [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }],
+      onChange: change,
+    }) })
+    const select = find(root, el => el.type === 'select')
+    expect(root.children[0].props.class.split(' ')).toEqual(expect.arrayContaining(['min-w-28', 'shrink-0']))
+    expect(select.props.class.split(' ')).toEqual(expect.arrayContaining([
+      'min-h-11', 'sm:min-h-9', 'px-2.5', 'py-1.5', 'pr-8', 'text-xs',
+    ]))
+    expect(select.props.class.split(' ')).not.toContain('py-2.5')
+    expect(select.props['aria-label']).toBe('Proposal status')
+    trigger(select, 'change', { target: { value: 'approved' } })
+    expect(change).toHaveBeenCalledWith('approved')
+  })
+
   it('emits numeric ratings and forwards native labels, disabled and validation state', () => {
     const update = vi.fn(), change = vi.fn()
     const root = mount({ render: () => h(AppSelect, {
@@ -37,6 +55,7 @@ describe('shared dropdown controls', () => {
     const select = find(root, el => el.type === 'select')
     expect(select.props).toMatchObject({ id: 'rating', required: true, disabled: true, 'aria-label': 'Rating', 'aria-invalid': 'true' })
     expect(select.props.class).toContain('pr-10')
+    expect(select.props.class.split(' ')).toEqual(expect.arrayContaining(['min-h-11', 'px-3.5', 'py-2.5', 'text-sm']))
     expect(select.props.class).toContain('dark:[color-scheme:dark]')
     expect(find(root, el => el.type === 'svg').props.class).toContain('pointer-events-none')
     trigger(select, 'change', { target: { value: '4' } })

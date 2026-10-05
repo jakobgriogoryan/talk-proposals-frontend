@@ -24,6 +24,7 @@ vi.mock('../src/components/SkeletonLoader.vue', () => ({ default: { render: () =
 import Proposals from '../src/views/Proposals.vue'
 import ReviewProposals from '../src/views/ReviewProposals.vue'
 import TopRatedSlider from '../src/components/TopRatedSlider.vue'
+import ProposalGrid from '../src/components/ProposalGrid.vue'
 
 // Exercise real Vue rendering/lifecycle without adding a DOM test dependency.
 const node = (type, text = '') => ({ type, text, props: {}, children: [], parent: null })
@@ -54,10 +55,14 @@ const find = (root, predicate) => {
     if (match) return match
   }
 }
+const findAll = (root, predicate) => [
+  ...(predicate(root) ? [root] : []),
+  ...root.children.flatMap(child => findAll(child, predicate)),
+]
 const mounted = []
-const mount = (component) => {
+const mount = (component, props = {}) => {
   const root = node('root')
-  const app = renderer.createApp(component)
+  const app = renderer.createApp(component, props)
   app.component('RouterLink', {
     props: ['to'],
     setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()),
@@ -89,6 +94,20 @@ afterEach(() => {
 })
 
 describe('proposal hover clearance', () => {
+  it('preserves card selection and forwards deletion without conflating the two actions', () => {
+    const select = vi.fn()
+    const remove = vi.fn()
+    const root = mount(ProposalGrid, { proposals: [proposal], clickable: true, onSelect: select })
+    const grid = find(root, el => el.props['data-testid'] === 'proposal-grid')
+    grid.children.find(el => el.props.onClick).props.onClick()
+    expect(select).toHaveBeenCalledWith(proposal.id)
+    const speaker = mount(ProposalGrid, { proposals: [proposal], showActions: true, onDelete: remove, onSelect: select })
+    find(speaker, el => el.type === 'button' && el.text.trim() === 'Delete').props.onClick()
+    find(speaker, el => el.props['data-testid'] === 'proposal-grid').children.find(el => el.props.onClick).props.onClick()
+    expect(remove).toHaveBeenCalledWith(proposal.id)
+    expect(select).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps carousel clipping while reserving space for the hover lift', async () => {
     mocks.getTopRated.mockResolvedValue({ data: { data: { proposals: [proposal] } } })
     const root = mount(TopRatedSlider)
@@ -99,26 +118,29 @@ describe('proposal hover clearance', () => {
     expect(find(track, el => el.props.class?.includes('hover:-translate-y-1'))).toBeDefined()
   })
 
-  it.each([['speaker', Proposals], ['reviewer', ReviewProposals]])('reserves first/last row clearance in the %s list fallback', async (_, component) => {
+  it.each([['speaker', Proposals], ['reviewer', ReviewProposals]])('uses natural row heights and hover clearance for the %s paginated list', async (role, component) => {
+    const proposals = Array.from({ length: 6 }, (_, index) => ({
+      ...proposal, id: index + 1, title: `Long proposal title ${index + 1}`,
+      tags: Array.from({ length: 12 }, (_, id) => ({ id, name: `Wrapping tag ${id}` })),
+      user: { name: 'A speaker with a long name that wraps across multiple lines' },
+    }))
+    const response = { data: { data: { proposals } } }
+    mocks.getAll.mockResolvedValue(response)
+    mocks.getForReview.mockResolvedValue(response)
     const root = mount(component)
     await settle()
-    expect(mocks.virtualize).toHaveBeenCalledWith(expect.objectContaining({ paddingStart: 12, paddingEnd: 20 }))
-    const row = find(root, el => el.props.style?.position === 'absolute')
-    expect(row.props.style.transform).toBe('translateY(12px)')
-    expect(row.parent.props.style.height).toBe('282px')
-    expect(find(root, el => el.props.class === 'overflow-auto')).toBeDefined()
-  })
-
-  it('uses virtualizer offsets and total size when rows are available', async () => {
-    mocks.virtualize.mockImplementation(() => ref({
-      getVirtualItems: () => [{ key: 0, index: 0, start: 12, size: 320 }],
-      getTotalSize: () => 352, measure: vi.fn(),
-    }))
-    const root = mount(ReviewProposals)
-    await settle()
-    const row = find(root, el => el.props.style?.position === 'absolute')
-    expect(row.props.style.transform).toBe('translateY(12px)')
-    expect(row.parent.props.style.height).toBe('352px')
+    expect(mocks.virtualize).not.toHaveBeenCalled()
+    const grid = find(root, el => el.props['data-testid'] === 'proposal-grid')
+    expect(grid).toBeDefined()
+    expect(grid.props.class.split(' ')).toEqual(expect.arrayContaining([
+      'grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-3',
+      'gap-4', 'sm:gap-6', 'pt-3', 'pb-5',
+    ]))
+    expect(findAll(grid, el => el.props.style?.position === 'absolute' || el.props.style?.height)).toHaveLength(0)
+    expect(findAll(grid, el => /^\/proposals\/\d+$/.test(el.props.href))).toHaveLength(6)
+    expect(findAll(grid, el => /\/edit$/.test(el.props.href))).toHaveLength(role === 'speaker' ? 6 : 0)
+    expect(findAll(grid, el => el.type === 'button' && el.text.trim() === 'Delete')).toHaveLength(role === 'speaker' ? 6 : 0)
+    expect(find(root, el => el.props.class === 'overflow-auto')).toBeUndefined()
   })
 })
 
@@ -130,7 +152,7 @@ describe('new proposal route warming', () => {
     expect(mocks.loadNewProposal).toHaveBeenCalledOnce()
     expect(mocks.getAll).toHaveBeenCalledOnce()
     expect(find(root, el => el.props.href === '/proposals/new')).toBeDefined()
-    expect(find(root, el => el.props.style?.position === 'absolute')).toBeDefined()
+    expect(find(root, el => el.props.href === '/proposals/1')).toBeDefined()
   })
 
   it('keeps the page usable after a preload failure and retries on pointer/keyboard intent', async () => {
