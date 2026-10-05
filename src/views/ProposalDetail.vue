@@ -195,6 +195,7 @@ import ReviewList from '../components/ReviewList.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import AppSelect from '../components/AppSelect.vue'
 import { statusOptions } from '../utils/selectOptions'
+import { downloadProposalFile, proposalDownloadError } from '../utils/proposalDownload'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -357,62 +358,13 @@ const formatDate = (dateString) => {
 }
 
 const downloadFile = async () => {
-    if (!proposal.value?.id || !proposal.value?.file_path) return
-  
+  if (!proposal.value?.id || !proposal.value?.file_path) return
+
   downloadError.value = ''
   try {
-    // Use the correct download endpoint with proposal ID
-    const response = await proposalsApi.download(proposal.value.id)
-    
-    // Check if response is actually an error (sometimes errors come as blobs)
-    if (response.data.type && response.data.type.includes('application/json')) {
-      const text = await response.data.text()
-      const errorData = JSON.parse(text)
-      throw new Error(errorData.message || 'Failed to download file')
-    }
-    
-    // Create a blob from the response
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const blobUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = blobUrl
-    
-    // Extract filename from the proposal title or use a default name
-    const fileName = proposal.value.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf'
-    link.setAttribute('download', fileName)
-    
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(blobUrl)
+    await downloadProposalFile(proposal.value.id, proposal.value.title)
   } catch (err) {
-    let errorMessage = 'Failed to download file. Please try again.'
-    
-    // Try to parse blob error response
-    if (err.response?.data && err.response.data instanceof Blob) {
-      try {
-        const text = await err.response.data.text()
-        const errorData = JSON.parse(text)
-        errorMessage = errorData.message || errorMessage
-      } catch (parseError) {
-        // If parsing fails, use default message
-      }
-    } else if (err.response?.data?.message) {
-      errorMessage = err.response.data.message
-    } else if (err.response?.status === 404) {
-      errorMessage = 'The file could not be found. It may have been deleted.'
-    } else if (err.response?.status === 403) {
-      errorMessage = 'You don\'t have permission to download this file.'
-    } else if (err.response?.status === 401) {
-      errorMessage = 'Please log in to download this file.'
-    } else if (!err.response) {
-      errorMessage = 'Unable to connect to the server. Please check your internet connection.'
-    } else if (err.message && !err.message.includes('status code') && !err.message.includes('Request failed')) {
-      errorMessage = err.message
-    }
-    
-    downloadError.value = errorMessage
-    // Toast will be shown automatically by axios interceptor for non-blob errors
+    downloadError.value = await proposalDownloadError(err)
   }
 }
 

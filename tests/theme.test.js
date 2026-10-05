@@ -30,6 +30,18 @@ afterEach(() => {
 })
 
 describe('theme preferences', () => {
+  it('still applies and toggles the theme when browser storage is blocked', () => {
+    vi.stubGlobal('localStorage', {
+      getItem() { throw new Error('Storage denied') },
+      setItem() { throw new Error('Storage denied') },
+    })
+    const theme = useThemeStore()
+    expect(theme.isDark).toBe(false)
+    theme.toggleTheme()
+    expect(classes.has('dark')).toBe(true)
+    theme.setTheme(false)
+    expect(classes.has('dark')).toBe(false)
+  })
   it('defaults to light mode without a saved preference', () => {
     classes.add('dark')
     expect(useThemeStore().isDark).toBe(false)

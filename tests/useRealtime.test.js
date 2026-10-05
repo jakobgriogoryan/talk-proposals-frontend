@@ -11,6 +11,7 @@ vi.mock('../src/config/echo', () => ({ default: echoMock }))
 import { REALTIME_EVENTS, useRealtime } from '../src/composables/useRealtime'
 import { useAuthStore } from '../src/stores/auth'
 import { useNotificationsStore } from '../src/stores/notifications'
+import { useCacheStore } from '../src/stores/cache'
 
 let createdChannels
 
@@ -43,6 +44,8 @@ describe('useRealtime', () => {
   })
 
   afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -54,6 +57,30 @@ describe('useRealtime', () => {
     expect(echoMock.private).toHaveBeenCalledTimes(1)
     expect(echoMock.private).toHaveBeenCalledWith('user.11')
     expect(echoMock.private).not.toHaveBeenCalledWith('proposals')
+  })
+
+  it.each(Object.values(REALTIME_EVENTS))('invalidates cached proposals before dispatching %s', eventName => {
+    vi.useFakeTimers()
+    useAuthStore().user = { id: 22, role: 'reviewer' }
+    const cache = useCacheStore()
+    for (const key of ['proposals:review:{}', 'proposals:one:7', 'proposals:top-rated:12', 'reviews:proposal:7:{}']) cache.set(key, { stale: true })
+    cache.set('reviews:proposal:8:{}', { valid: true })
+    window.dispatchEvent.mockImplementation(() => {
+      expect(cache.has('proposals:review:{}')).toBe(false)
+      expect(cache.has('proposals:one:7')).toBe(false)
+      expect(cache.has('proposals:top-rated:12')).toBe(false)
+      expect(cache.has('reviews:proposal:7:{}')).toBe(false)
+    })
+    const realtime = useRealtime()
+    realtime.initialize()
+    latestChannel('proposals').listeners.get(eventName)({
+      proposal: {id: 7, title: 'Updated'}, review: {id: 1, rating: 5}, new_status: 'approved', message: 'Updated',
+    })
+    expect(window.dispatchEvent).toHaveBeenCalledOnce()
+    expect(cache.has('reviews:proposal:8:{}')).toBe(true)
+    realtime.disconnect()
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it('uses the canonical event names on reviewer and user channels', () => {
@@ -105,13 +132,25 @@ describe('useRealtime', () => {
     const stop = useRealtime().listenToProposal(91, { onReviewed, onStatusChanged })
     const channel = latestChannel('proposals.91')
 
-    expect(channel.listeners.get(REALTIME_EVENTS.reviewed)).toBe(onReviewed)
-    expect(channel.listeners.get(REALTIME_EVENTS.statusChanged)).toBe(onStatusChanged)
+    const reviewedListener = channel.listeners.get(REALTIME_EVENTS.reviewed)
+    const statusListener = channel.listeners.get(REALTIME_EVENTS.statusChanged)
+    const cache = useCacheStore()
+    cache.set('proposals:one:91', {})
+    cache.set('reviews:proposal:91:{}', {})
+    const payload = { proposal_id: 91 }
+    onReviewed.mockImplementation(() => {
+      expect(cache.has('proposals:one:91')).toBe(false)
+      expect(cache.has('reviews:proposal:91:{}')).toBe(false)
+    })
+    reviewedListener(payload)
+    statusListener(payload)
+    expect(onReviewed).toHaveBeenCalledWith(payload)
+    expect(onStatusChanged).toHaveBeenCalledWith(payload)
 
     stop()
 
-    expect(channel.stopListening).toHaveBeenCalledWith(REALTIME_EVENTS.reviewed, onReviewed)
-    expect(channel.stopListening).toHaveBeenCalledWith(REALTIME_EVENTS.statusChanged, onStatusChanged)
+    expect(channel.stopListening).toHaveBeenCalledWith(REALTIME_EVENTS.reviewed, reviewedListener)
+    expect(channel.stopListening).toHaveBeenCalledWith(REALTIME_EVENTS.statusChanged, statusListener)
     expect(echoMock.leave).toHaveBeenCalledWith('proposals.91')
   })
 

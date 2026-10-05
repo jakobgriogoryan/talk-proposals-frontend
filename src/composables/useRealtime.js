@@ -1,5 +1,6 @@
 import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
+import { useCacheStore } from '../stores/cache'
 import echo from '../config/echo'
 
 export const REALTIME_EVENTS = Object.freeze({
@@ -21,6 +22,7 @@ const statusColors = {
 export function useRealtime() {
   const authStore = useAuthStore()
   const notificationsStore = useNotificationsStore()
+  const cacheStore = useCacheStore()
   const channels = new Map()
   const recentlyHandledEvents = new Map()
 
@@ -86,7 +88,15 @@ export function useRealtime() {
     return () => stopChannel(channelName, channel)
   }
 
+  const invalidateProposalCaches = (data) => {
+    cacheStore.invalidatePrefix('proposals:')
+    const proposalId = data.proposal_id ?? data.proposal?.id
+    cacheStore.invalidatePrefix(proposalId ? `reviews:proposal:${proposalId}:` : 'reviews:proposal:')
+  }
+
   const dispatch = (eventName, data) => {
+    invalidateProposalCaches(data)
+    if (eventName === 'proposal-submitted') cacheStore.invalidatePrefix('tags:')
     window.dispatchEvent(new CustomEvent(eventName, { detail: data }))
   }
 
@@ -161,10 +171,19 @@ export function useRealtime() {
       return () => {}
     }
 
-    return subscribe(`proposals.${proposalId}`, {
-      [REALTIME_EVENTS.reviewed]: callbacks.onReviewed,
-      [REALTIME_EVENTS.statusChanged]: callbacks.onStatusChanged,
-    })
+    const listeners = {}
+    for (const [eventName, callback] of [
+      [REALTIME_EVENTS.reviewed, callbacks.onReviewed],
+      [REALTIME_EVENTS.statusChanged, callbacks.onStatusChanged],
+    ]) {
+      if (typeof callback === 'function') {
+        listeners[eventName] = data => {
+          invalidateProposalCaches(data)
+          callback(data)
+        }
+      }
+    }
+    return subscribe(`proposals.${proposalId}`, listeners)
   }
 
   return {

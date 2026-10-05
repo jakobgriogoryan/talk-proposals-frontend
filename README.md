@@ -59,8 +59,14 @@ and disable secure-only cookies for this HTTP-only local setup. Clear Laravel's
 configuration cache after changing local configuration. Do not mix this cookie
 setup with browsing the frontend through `127.0.0.1:5173`.
 
-The Vite configuration explicitly allows `talkproposals.test` and reserves port
-5173 instead of silently switching ports. Without logging in, domain health
+Set `DEV_ALLOWED_HOSTS=talkproposals.test` in the frontend `.env` for this local
+domain. A clean checkout has no machine-specific allowed host. `DEV_PORT` defaults
+to 5173 and reserves it instead of silently switching ports; `DEV_API_TARGET`
+defaults to `http://localhost:8000` for `/api` and `/sanctum`. Custom HTTPS targets
+must have a trusted certificate (TLS verification is not disabled). These `DEV_*`
+settings configure Vite only and are not exposed in the browser bundle.
+Set the backend's `CORS_ALLOWED_ORIGINS` to the browser origins you actually use
+when developing across origins. Without logging in, domain health
 checks should return `200` for `/login`, `204` for `/sanctum/csrf-cookie`, and
 JSON `401` for `/api/user`.
 
@@ -112,3 +118,46 @@ prevent a later retry. User checks started before a login/logout or identity
 change cannot overwrite the current session. The router guard awaits this shared
 request without an arbitrary timer cutoff, then applies existing guest/role
 restrictions. Tests: `tests/authInitialization.test.js`.
+
+### Workflow regression safeguards
+
+API requests retain their originating authentication session version through CSRF
+retries. A delayed `401` from an older session cannot clear a fresh login, and a
+scheduled login redirect is discarded when the session changes. Speaker, reviewer,
+and admin lists apply only the latest request's results and loading state.
+
+Realtime events invalidate proposal and matching review caches before consumers
+refresh. Status events reload the authoritative filtered list instead of merging
+partial broadcast payloads; the top-rated slider refreshes on proposal events and
+cleans up its listeners, requests, and timers on unmount.
+
+Both proposal details and the edit form download PDFs through the authenticated
+API via `src/utils/proposalDownload.js`. Resource `file_path` values are not used
+as direct browser links. Blob error responses are displayed rather than downloaded,
+and temporary object URLs are released even when a browser download fails.
+
+Regression tests: `tests/csrfRetry.test.js`, `tests/proposalListRequests.test.js`,
+`tests/useRealtime.test.js`, `tests/topRatedRealtime.test.js`, and
+`tests/proposalDownloads.test.js`.
+
+### Review and maintainability safeguards
+
+`useProposalList` owns shared filter serialization, pagination and latest-request
+state; role-specific views inject their existing API methods. Editing observes
+route changes and ignores stale loads and saves, including after unmount.
+
+Review ratings come from the API, not an invented fallback. Failed option loads
+disable submission and provide Retry. Rejected PDFs block submission until the
+selection is corrected or explicitly cleared. The PDF limit is a named client
+mirror of the backend contract, not a deployment environment setting.
+
+Without `VITE_PUSHER_APP_KEY`, Echo uses its native null broadcaster and opens no
+Pusher connection. Set the public key and cluster to enable realtime; never put
+the Pusher secret in a `VITE_*` variable. Admin status mutations refresh filtered
+results even when realtime is unavailable. Notification timers are cancelled on
+removal, clearing and store disposal. Themes still work when localStorage is blocked.
+
+Frontend tests exist under `tests/` and use Vitest with a Vue custom renderer.
+Run `npm test` for unit/component regressions and `npm run build` for compilation.
+These are not browser end-to-end tests; keep the manual checks above for native
+file dialogs, downloads and dropdown behavior.

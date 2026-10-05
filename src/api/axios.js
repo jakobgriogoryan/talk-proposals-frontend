@@ -16,6 +16,10 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     config.withCredentials = true
+    // Preserve the originating session through CSRF retries as well.
+    if (config._sessionVersion === undefined) {
+      config._sessionVersion = useAuthStore().sessionVersion
+    }
 
     // Fetch CSRF cookie for stateful requests (POST, PUT, PATCH, DELETE)
     const method = config.method?.toUpperCase()
@@ -46,6 +50,12 @@ api.interceptors.response.use(
   },
   async (error) => {
     const notificationsStore = useNotificationsStore()
+
+    // A request from a superseded session must not clear or redirect a newer login.
+    if (error.response?.status === 401 && error.config &&
+        error.config._sessionVersion !== useAuthStore().sessionVersion) {
+      return Promise.reject(error)
+    }
 
     // Recover once, before notifying. A second 419 is a terminal failure.
     if (error.response?.status === 419 && error.config && !error.config._csrfRetried) {
@@ -143,8 +153,8 @@ api.interceptors.response.use(
       
       // For unexpected 401s, handle normally
       // Clear user from store
+      const authStore = useAuthStore()
       try {
-        const authStore = useAuthStore()
         if (authStore) {
           authStore.setUser(null)
         }
@@ -154,8 +164,10 @@ api.interceptors.response.use(
       const isOnAuthPage = currentPath === '/login' || currentPath === '/register'
 
       if (!isOnAuthPage) {
+        const version = authStore.sessionVersion
         try {
           setTimeout(() => {
+            if (authStore.sessionVersion !== version || authStore.user) return
             const currentPathAfterDelay = window.location.pathname
             if (currentPathAfterDelay !== '/login' && currentPathAfterDelay !== '/register') {
               window.location.href = '/login'

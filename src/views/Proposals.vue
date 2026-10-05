@@ -151,6 +151,7 @@ import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { useWindowSize } from '@vueuse/core'
 import { proposalsApi, tagsApi } from '../api'
+import { useProposalList } from '../composables/useProposalList'
 import ProposalCard from '../components/ProposalCard.vue'
 import ProposalFilters from '../components/ProposalFilters.vue'
 import TopRatedSlider from '../components/TopRatedSlider.vue'
@@ -162,15 +163,9 @@ const preloadNewProposal = () => {
   loadNewProposal().catch(() => {})
 }
 
-const proposals = ref([])
 const tags = ref([])
-const loading = ref(false)
-const filters = ref({
-  search: '',
-  tags: [],
-  status: '',
-})
-const pagination = ref(null)
+const { proposals, loading, filters, pagination, fetchProposals, updateFilters,
+  goToPage, paginationPages, paginationInfo } = useProposalList(proposalsApi.getAll)
 const scrollContainer = ref(null)
 
 // Virtual scrolling setup - use useWindowSize for reactive columns
@@ -279,53 +274,8 @@ const handleProposalSubmitted = (event) => {
 }
 
 const handleProposalStatusChanged = (event) => {
-  // Update proposal status in the list if it exists
-  const data = event.detail
-  const proposalIndex = proposals.value.findIndex(p => p.id === data.proposal_id || p.id === data.proposal?.id)
-  if (proposalIndex !== -1 && data.proposal) {
-    // Update the entire proposal object with the new data from the event
-    proposals.value[proposalIndex] = {
-      ...proposals.value[proposalIndex],
-      ...data.proposal,
-      status: data.new_status,
-    }
-  } else {
-    // If not in current page, refresh to get updated list
-    fetchProposals(pagination.value?.current_page || 1)
-  }
-}
-
-const fetchProposals = async (page = 1) => {
-  loading.value = true
-  try {
-    const rawParams = {
-      page,
-      ...filters.value,
-    }
-
-    // Only send params that actually have a value
-    const params = {}
-    Object.entries(rawParams).forEach(([key, value]) => {
-      if (key === 'tags') {
-        if (Array.isArray(value) && value.length > 0) {
-          params.tags = value.join(',')
-    }
-        return
-      }
-
-      if (value !== '' && value !== null && value !== undefined) {
-        params[key] = value
-      }
-    })
-
-    const response = await proposalsApi.getAll(params)
-    // Handle new ApiResponse format: { status, message, data: { proposals, pagination } }
-    const data = response.data.data || response.data
-    proposals.value = data.proposals
-    pagination.value = data.pagination
-  } catch (error) {} finally {
-    loading.value = false
-  }
+  // Broadcast payloads are partial; reload to honor the active filters.
+  fetchProposals(pagination.value?.current_page || 1)
 }
 
 const fetchTags = async () => {
@@ -336,99 +286,6 @@ const fetchTags = async () => {
     tags.value = data.tags
   } catch (error) {}
 }
-
-const updateFilters = (newFilters) => {
-  filters.value = newFilters
-  fetchProposals(1)
-}
-
-const goToPage = (page) => {
-  fetchProposals(page)
-}
-
-// Generate pagination pages with ellipsis (best practice algorithm)
-const paginationPages = computed(() => {
-  if (!pagination.value || pagination.value.last_page <= 1) {
-    return []
-  }
-
-  const current = pagination.value.current_page
-  const last = pagination.value.last_page
-  const pages = []
-
-  // If 7 or fewer pages, show all
-  if (last <= 7) {
-    for (let i = 1; i <= last; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
-
-  // Always show first page
-  pages.push(1)
-
-  // Calculate window around current page (2 pages on each side)
-  const windowSize = 2
-  let windowStart = Math.max(2, current - windowSize)
-  let windowEnd = Math.min(last - 1, current + windowSize)
-
-  // Adjust window near boundaries
-  if (current <= windowSize + 1) {
-    // Near start: show pages 2-5
-    windowEnd = Math.min(5, last - 1)
-    windowStart = 2
-  } else if (current >= last - windowSize) {
-    // Near end: show last 5 pages
-    windowStart = Math.max(2, last - 4)
-    windowEnd = last - 1
-  }
-
-  // Add ellipsis after first page if there's a gap
-  if (windowStart > 2) {
-    pages.push('ellipsis')
-  }
-
-  // Add pages in window (avoid duplicates with first/last)
-  for (let i = windowStart; i <= windowEnd; i++) {
-    if (i !== 1 && i !== last) {
-      pages.push(i)
-    }
-  }
-
-  // Add ellipsis before last page if there's a gap
-  if (windowEnd < last - 1) {
-    pages.push('ellipsis')
-  }
-
-  // Always show last page (if not already shown)
-  if (last > 1) {
-    pages.push(last)
-  }
-
-  // Remove duplicate ellipsis (edge case)
-  const cleanedPages = []
-  for (let i = 0; i < pages.length; i++) {
-    if (pages[i] === 'ellipsis' && pages[i - 1] === 'ellipsis') {
-      continue
-    }
-    cleanedPages.push(pages[i])
-  }
-
-  return cleanedPages
-})
-
-// Calculate pagination info for display
-const paginationInfo = computed(() => {
-  if (!pagination.value) {
-    return { from: 0, to: 0 }
-  }
-  
-  const { current_page, per_page, total } = pagination.value
-  const from = total === 0 ? 0 : (current_page - 1) * per_page + 1
-  const to = Math.min(current_page * per_page, total)
-  
-  return { from, to }
-})
 
 const handleDelete = async (id) => {
   if (confirm('Are you sure you want to delete this proposal?')) {

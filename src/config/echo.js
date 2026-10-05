@@ -2,13 +2,13 @@ import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import api from '../api/axios'
 
-// Configure Pusher
-window.Pusher = Pusher
+const key = import.meta.env.VITE_PUSHER_APP_KEY?.trim()
 
 // Create Echo instance
-const echo = new Echo({
+const echo = new Echo(key ? {
   broadcaster: 'pusher',
-  key: import.meta.env.VITE_PUSHER_APP_KEY || 'your-pusher-key',
+  key,
+  Pusher,
   cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
   forceTLS: true,
   encrypted: true,
@@ -37,7 +37,6 @@ const echo = new Echo({
       },
     }
   },
-})
+} : { broadcaster: 'null' })
 
 export default echo
-

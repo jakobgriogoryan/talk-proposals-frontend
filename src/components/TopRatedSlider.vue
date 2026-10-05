@@ -114,6 +114,9 @@ const currentIndex = ref(0)
 const autoSlideInterval = ref(null)
 const slidesPerView = ref(1) // Will be updated based on screen size
 const sliderContainer = ref(null)
+let requestVersion = 0
+let resumeTimeout = null
+const proposalEvents = ['proposal-submitted', 'proposal-reviewed', 'proposal-status-changed']
 
 // Touch/swipe handling
 const touchStartX = ref(0)
@@ -161,14 +164,19 @@ const transformValue = computed(() => {
 })
 
 const fetchTopRated = async () => {
+  const version = ++requestVersion
   try {
     const response = await proposalsApi.getTopRated(12) // Get 12 top-rated proposals
+    if (version !== requestVersion) return
     const data = response.data.data || response.data
     proposals.value = data.proposals || []
+    currentIndex.value = Math.min(currentIndex.value, maxIndex.value)
     // Start auto-slide after proposals are loaded
     if (proposals.value.length > 0) {
       stopAutoSlide() // Stop any existing interval
       startAutoSlide() // Start fresh
+    } else {
+      stopAutoSlide()
     }
   } catch (error) {}
 }
@@ -194,27 +202,21 @@ const handleNextClick = () => {
   stopAutoSlide()
   nextSlide()
   // Resume auto-slide after a delay (forever loop)
-  setTimeout(() => {
-    startAutoSlide()
-  }, 5000) // Resume after 5 seconds
+  resumeAutoSlide()
 }
 
 const handlePreviousClick = () => {
   stopAutoSlide()
   previousSlide()
   // Resume auto-slide after a delay (forever loop)
-  setTimeout(() => {
-    startAutoSlide()
-  }, 5000) // Resume after 5 seconds
+  resumeAutoSlide()
 }
 
 const goToSlide = (index) => {
   stopAutoSlide()
   currentIndex.value = index
   // Resume auto-slide after a delay (forever loop)
-  setTimeout(() => {
-    startAutoSlide()
-  }, 5000) // Resume after 5 seconds
+  resumeAutoSlide()
 }
 
 const goToProposal = (id) => {
@@ -229,6 +231,7 @@ const getStatusClass = (status) => {
 
 const startAutoSlide = () => {
   stopAutoSlide() // Clear any existing interval first
+  if (!proposals.value.length) return
   autoSlideInterval.value = setInterval(() => {
     previousSlide() // Rotate to the left (previous slide) - loops forever
   }, 7000) // Auto-advance every 7 seconds (slower)
@@ -239,6 +242,14 @@ const stopAutoSlide = () => {
     clearInterval(autoSlideInterval.value)
     autoSlideInterval.value = null
   }
+}
+
+const resumeAutoSlide = () => {
+  clearTimeout(resumeTimeout)
+  resumeTimeout = setTimeout(() => {
+    resumeTimeout = null
+    startAutoSlide()
+  }, 5000)
 }
 
 // Touch event handlers for swipe support
@@ -270,19 +281,21 @@ const handleTouchEnd = () => {
   touchStartX.value = 0
   touchEndX.value = 0
   
-  setTimeout(() => {
-    startAutoSlide()
-  }, 5000)
+  resumeAutoSlide()
 }
 
 onMounted(() => {
   updateSlidesPerView()
   window.addEventListener('resize', updateSlidesPerView)
+  proposalEvents.forEach(event => window.addEventListener(event, fetchTopRated))
   fetchTopRated() // This will start auto-slide after data loads
 })
 
 onUnmounted(() => {
+  requestVersion++
   window.removeEventListener('resize', updateSlidesPerView)
+  proposalEvents.forEach(event => window.removeEventListener(event, fetchTopRated))
+  clearTimeout(resumeTimeout)
   stopAutoSlide()
 })
 </script>
