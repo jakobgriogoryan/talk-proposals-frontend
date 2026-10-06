@@ -76,19 +76,10 @@
           </div>
         </div>
         <div v-if="authStore.isAdmin" class="mt-3 sm:mt-4">
-          <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
+          <label for="proposal-status" class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
             Change Status
           </label>
-          <select
-            v-model="status"
-            @change="updateStatus"
-            class="w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md text-sm sm:text-base bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-            :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': statusError }"
-          >
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <AppSelect id="proposal-status" v-model="status" :options="statusOptions" compact :error="statusError" @change="updateStatus" />
           <div v-if="statusError" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ statusError }}
           </div>
@@ -150,23 +141,10 @@
           <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-ocean-100">Edit Review</h3>
           <form @submit.prevent="handleUpdateReview" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
+              <label for="edit-review-rating" class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
                 Rating *
               </label>
-              <select
-                v-model="editReviewForm.rating"
-                required
-                class="w-full px-3 py-2 border border-gray-300 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-              >
-                <option value="">Select rating</option>
-                <option
-                  v-for="rating in ratingOptions"
-                  :key="rating.value"
-                  :value="rating.value"
-                >
-                  {{ rating.label }}
-                </option>
-              </select>
+              <AppSelect id="edit-review-rating" v-model="editReviewForm.rating" :options="ratingOptions" placeholder="Select rating" required :disabled="editReviewLoading" />
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-2">
@@ -205,20 +183,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useNotificationsStore } from '../stores/notifications'
 import { useRealtime } from '../composables/useRealtime'
 import { proposalsApi, reviewsApi } from '../api'
-import api from '../api/axios'
 import ReviewForm from '../components/ReviewForm.vue'
 import ReviewList from '../components/ReviewList.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
+import AppSelect from '../components/AppSelect.vue'
+import { statusOptions } from '../utils/selectOptions'
+import { downloadProposalFile, proposalDownloadError } from '../utils/proposalDownload'
 
 const route = useRoute()
 const authStore = useAuthStore()
-const notificationsStore = useNotificationsStore()
 const proposal = ref(null)
 const reviews = ref([])
 const loading = ref(true)
@@ -237,6 +215,12 @@ const editReviewLoading = ref(false)
 const editReviewError = ref('')
 const ratingOptions = ref([])
 const { listenToProposal } = useRealtime()
+let stopProposalRealtime = () => {}
+let proposalRequest = 0
+let reviewsRequest = 0
+let refreshQueued = false
+let disposed = false
+let deletedProposalId = null
 
 const statusClasses = computed(() => {
   if (!proposal.value) return ''
@@ -259,18 +243,23 @@ const currentUserReview = computed(() => {
 })
 
 const fetchProposal = async () => {
+  if (disposed || deletedProposalId === String(route.params.id)) return
+  const request = ++proposalRequest
+  const proposalId = String(route.params.id)
+  const reviewRequest = ++reviewsRequest
   error.value = ''
   loading.value = true
   try {
     // Fetch proposal and reviews in parallel for better performance
     const [proposalResponse, reviewsResponse] = await Promise.all([
-      proposalsApi.getOne(route.params.id),
-      reviewsApi.getForProposal(route.params.id).catch(err => {
+      proposalsApi.getOne(proposalId),
+      reviewsApi.getForProposal(proposalId).catch(() => {
         // If reviews fail, just log and continue
         return { data: { data: { reviews: [] } } }
       })
     ])
     
+    if (request !== proposalRequest || proposalId !== String(route.params.id)) return
     // Handle new ApiResponse format: { status, message, data: { proposal } }
     const proposalData = proposalResponse.data.data || proposalResponse.data
     proposal.value = proposalData.proposal
@@ -278,8 +267,9 @@ const fetchProposal = async () => {
     
     // Handle reviews response
     const reviewsData = reviewsResponse.data.data || reviewsResponse.data
-    reviews.value = reviewsData.reviews || []
+    if (reviewRequest === reviewsRequest) reviews.value = reviewsData.reviews || []
   } catch (err) {
+    if (request !== proposalRequest || proposalId !== String(route.params.id)) return
     // Get user-friendly error message
     let errorMessage = 'Failed to load proposal. Please try again.'
     
@@ -300,16 +290,18 @@ const fetchProposal = async () => {
     error.value = errorMessage
     proposal.value = null
   } finally {
-    loading.value = false
+    if (request === proposalRequest) loading.value = false
   }
 }
 
 const fetchReviews = async () => {
+  const request = ++reviewsRequest
+  const proposalId = String(route.params.id)
   try {
-    const response = await reviewsApi.getForProposal(route.params.id)
+    const response = await reviewsApi.getForProposal(proposalId)
     // Handle new ApiResponse format: { status, message, data: { reviews } }
     const data = response.data.data || response.data
-    reviews.value = data.reviews
+    if (request === reviewsRequest && proposalId === String(route.params.id)) reviews.value = data.reviews
   } catch (error) {}
 }
 
@@ -367,62 +359,13 @@ const formatDate = (dateString) => {
 }
 
 const downloadFile = async () => {
-    if (!proposal.value?.id || !proposal.value?.file_path) return
-  
+  if (!proposal.value?.id || !proposal.value?.file_path) return
+
   downloadError.value = ''
   try {
-    // Use the correct download endpoint with proposal ID
-    const response = await proposalsApi.download(proposal.value.id)
-    
-    // Check if response is actually an error (sometimes errors come as blobs)
-    if (response.data.type && response.data.type.includes('application/json')) {
-      const text = await response.data.text()
-      const errorData = JSON.parse(text)
-      throw new Error(errorData.message || 'Failed to download file')
-    }
-    
-    // Create a blob from the response
-    const blob = new Blob([response.data], { type: 'application/pdf' })
-    const blobUrl = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = blobUrl
-    
-    // Extract filename from the proposal title or use a default name
-    const fileName = proposal.value.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf'
-    link.setAttribute('download', fileName)
-    
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(blobUrl)
+    await downloadProposalFile(proposal.value.id, proposal.value.title)
   } catch (err) {
-    let errorMessage = 'Failed to download file. Please try again.'
-    
-    // Try to parse blob error response
-    if (err.response?.data && err.response.data instanceof Blob) {
-      try {
-        const text = await err.response.data.text()
-        const errorData = JSON.parse(text)
-        errorMessage = errorData.message || errorMessage
-      } catch (parseError) {
-        // If parsing fails, use default message
-      }
-    } else if (err.response?.data?.message) {
-      errorMessage = err.response.data.message
-    } else if (err.response?.status === 404) {
-      errorMessage = 'The file could not be found. It may have been deleted.'
-    } else if (err.response?.status === 403) {
-      errorMessage = 'You don\'t have permission to download this file.'
-    } else if (err.response?.status === 401) {
-      errorMessage = 'Please log in to download this file.'
-    } else if (!err.response) {
-      errorMessage = 'Unable to connect to the server. Please check your internet connection.'
-    } else if (err.message && !err.message.includes('status code') && !err.message.includes('Request failed')) {
-      errorMessage = err.message
-    }
-    
-    downloadError.value = errorMessage
-    // Toast will be shown automatically by axios interceptor for non-blob errors
+    downloadError.value = await proposalDownloadError(err)
   }
 }
 
@@ -496,83 +439,91 @@ const fetchRatingOptions = async () => {
   }
 }
 
-// Handle status changes from global events
-const handleStatusChanged = (event) => {
-  const data = event.detail
-  const routeId = parseInt(route.params.id, 10)
-  const proposalId = proposal.value?.id
-  const eventProposalId = data.proposal_id || data.proposal?.id
-  
-  // Check if this event is for the current proposal (route ID is primary check)
-  // Use loose equality to handle string/number mismatches
-  const isMatch = routeId == eventProposalId || 
-                 String(routeId) === String(eventProposalId) ||
-                 (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
-  
-  if (isMatch) {
-    // Update the entire proposal object with the new data
-    if (data.proposal) {
-      proposal.value = {
-        ...(proposal.value || {}),
-        ...data.proposal,
-        status: data.new_status,
-      }
-    } else if (proposal.value) {
-      proposal.value.status = data.new_status
-    }
-    status.value = data.new_status
+// Events are invalidation signals, not authoritative snapshots. Coalesce the
+// global and scoped channel copies; existing request versions reject old reads.
+const refreshCurrentProposal = () => {
+  if (refreshQueued || disposed) return
+  const proposalId = String(route.params.id)
+  refreshQueued = true
+  queueMicrotask(() => {
+    refreshQueued = false
+    if (!disposed && proposalId === String(route.params.id)) fetchProposal()
+  })
+}
+
+const matchesCurrentProposal = data => String(data.proposal_id ?? data.proposal?.id) === String(route.params.id)
+
+const handleProposalDeleted = data => {
+  if (!matchesCurrentProposal(data)) return
+  deletedProposalId = String(route.params.id)
+  proposalRequest++
+  reviewsRequest++
+  proposal.value = null
+  reviews.value = []
+  loading.value = false
+  error.value = 'This proposal has been deleted.'
+  cancelEditReview()
+  stopProposalRealtime()
+}
+
+const handleProposalChanged = event => {
+  if (matchesCurrentProposal(event.detail)) refreshCurrentProposal()
+}
+const handleGlobalDeletion = event => handleProposalDeleted(event.detail)
+
+const subscribeToProposal = (proposalId) => {
+  stopProposalRealtime()
+  stopProposalRealtime = () => {}
+
+  if (!proposalId) {
+    return
   }
+
+  stopProposalRealtime = listenToProposal(proposalId, {
+    onResynced: refreshCurrentProposal,
+    onReviewed: refreshCurrentProposal,
+    onReviewUpdated: refreshCurrentProposal,
+    onStatusChanged: refreshCurrentProposal,
+    onUpdated: refreshCurrentProposal,
+    onDeleted: handleProposalDeleted,
+  })
 }
 
 onMounted(() => {
   fetchProposal()
   fetchRatingOptions()
-  
-  // Listen to real-time events for this specific proposal
-  if (route.params.id) {
-    listenToProposal(route.params.id, {
-      onReviewed: () => {
-        // Refresh reviews when a new review is added
-        fetchReviews()
-      },
-      onStatusChanged: (data) => {
-        // Update proposal with full resource from event
-        const routeId = parseInt(route.params.id, 10)
-        const proposalId = proposal.value?.id
-        const eventProposalId = data.proposal_id || data.proposal?.id
-        
-        // Check if this event is for the current proposal (route ID is primary check)
-        // Use loose equality to handle string/number mismatches
-        const isMatch = routeId == eventProposalId || 
-                       String(routeId) === String(eventProposalId) ||
-                       (proposalId && (proposalId == eventProposalId || String(proposalId) === String(eventProposalId)))
-        
-        if (isMatch) {
-          // Update the entire proposal object with the new data
-          if (data.proposal) {
-            proposal.value = {
-              ...(proposal.value || {}),
-              ...data.proposal,
-              status: data.new_status,
-            }
-          } else if (proposal.value) {
-            proposal.value.status = data.new_status
-          }
-          status.value = data.new_status
-          
-          // Show notification
-          notificationsStore.push(data.message, 'info', 5000)
-        }
-      },
-    })
-  }
+  subscribeToProposal(route.params.id)
   
   // Also listen to global events for status changes
-  window.addEventListener('proposal-status-changed', handleStatusChanged)
+  window.addEventListener('proposal-status-changed', handleProposalChanged)
+  window.addEventListener('proposal-updated', handleProposalChanged)
+  window.addEventListener('review-updated', handleProposalChanged)
+  window.addEventListener('proposal-deleted', handleGlobalDeletion)
 })
+
+watch(
+  () => route.params.id,
+  (proposalId, previousProposalId) => {
+    if (proposalId === previousProposalId) {
+      return
+    }
+
+    deletedProposalId = null
+    subscribeToProposal(proposalId)
+    reviews.value = []
+    cancelEditReview()
+    fetchProposal()
+  }
+)
 
 onUnmounted(() => {
-  window.removeEventListener('proposal-status-changed', handleStatusChanged)
+  disposed = true
+  proposalRequest++
+  reviewsRequest++
+  stopProposalRealtime()
+  window.removeEventListener('proposal-status-changed', handleProposalChanged)
+  window.removeEventListener('proposal-updated', handleProposalChanged)
+  window.removeEventListener('review-updated', handleProposalChanged)
+  window.removeEventListener('proposal-deleted', handleGlobalDeletion)
 })
 </script>
-

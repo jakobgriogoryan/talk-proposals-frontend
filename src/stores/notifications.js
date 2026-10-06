@@ -1,61 +1,31 @@
 import { defineStore } from 'pinia'
+import { computed, onScopeDispose, ref } from 'vue'
 
-export const useNotificationsStore = defineStore('notifications', {
-  state: () => ({
-    notifications: [],
-  }),
+export const useNotificationsStore = defineStore('notifications', () => {
+  const notifications = ref([])
+  const timers = new Map()
+  let nextId = 0
+  const all = computed(() => notifications.value)
 
-  getters: {
-    all: (state) => state.notifications,
-  },
+  const remove = (id) => {
+    clearTimeout(timers.get(id))
+    timers.delete(id)
+    notifications.value = notifications.value.filter(notification => notification.id !== id)
+  }
 
-  actions: {
-    /**
-     * Push a new notification.
-     *
-     * @param {string} message
-     * @param {string} type - 'success' | 'error' | 'warning' | 'info'
-     * @param {number} duration - Auto-close duration in milliseconds (default: 4000)
-     */
-    push(message, type = 'success', duration = 4000) {
-      const id = Date.now() + Math.random()
-      const notification = {
-        id,
-        message,
-        type,
-        duration,
-      }
+  const clear = () => {
+    timers.forEach(timer => clearTimeout(timer))
+    timers.clear()
+    notifications.value = []
+  }
 
-      this.notifications.push(notification)
+  const push = (message, type = 'success', duration = 4000) => {
+    const id = ++nextId
+    notifications.value.push({ id, message, type, duration })
+    if (duration > 0) timers.set(id, setTimeout(() => remove(id), duration))
+    return id
+  }
 
-      // Auto-remove after duration
-      if (duration > 0) {
-        setTimeout(() => {
-          this.remove(id)
-        }, duration)
-      }
-
-      return id
-    },
-
-    /**
-     * Remove a notification by id.
-     *
-     * @param {number|string} id
-     */
-    remove(id) {
-      const index = this.notifications.findIndex((n) => n.id === id)
-      if (index > -1) {
-        this.notifications.splice(index, 1)
-      }
-    },
-
-    /**
-     * Clear all notifications.
-     */
-    clear() {
-      this.notifications = []
-    },
-  },
+  onScopeDispose(clear)
+  return { notifications, all, push, remove, clear }
 })
-

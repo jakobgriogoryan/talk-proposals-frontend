@@ -84,17 +84,10 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
+          <label for="register-role" class="block text-sm font-medium text-gray-600 dark:text-ocean-300 mb-1.5">
             Role
           </label>
-          <select
-            v-model="form.role"
-            required
-            class="w-full px-3.5 py-2.5 border border-gray-200 dark:border-ocean-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-ocean-400/50 focus:border-blue-400 dark:focus:border-ocean-500 transition-all shadow-sm hover:shadow-md appearance-none bg-white dark:bg-ocean-900/50 text-gray-900 dark:text-ocean-100"
-          >
-            <option value="speaker" class="bg-white dark:bg-ocean-900">Speaker</option>
-            <option value="reviewer" class="bg-white dark:bg-ocean-900">Reviewer</option>
-          </select>
+          <AppSelect id="register-role" v-model="form.role" :options="roleOptions" required :disabled="loading" :error="errors.role" />
         </div>
         <div v-if="error" class="text-red-500 dark:text-red-400 text-sm py-1">{{ error }}</div>
         <button
@@ -117,9 +110,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useAuthRedirect } from '../composables/useAuthRedirect'
+import AppSelect from '../components/AppSelect.vue'
+import { roleOptions } from '../utils/selectOptions'
 
 const authStore = useAuthStore()
 const { redirectToHomepage } = useAuthRedirect()
@@ -167,4 +161,3 @@ const handleRegister = async () => {
   }
 }
 </script>
-

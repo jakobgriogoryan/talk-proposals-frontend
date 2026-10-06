@@ -13,13 +13,22 @@ import { onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
 import { useRealtime } from './composables/useRealtime'
+import { createRealtimeSession } from './composables/realtimeSession'
 import { authApi } from './api/auth'
 import Navigation from './components/Navigation.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
+useThemeStore()
 const { initialize, disconnect } = useRealtime()
+const realtimeSession = createRealtimeSession({
+  disconnect,
+  initialize: (userId) => {
+    if (authStore.user?.id === userId) {
+      initialize()
+    }
+  },
+})
 
 // Initialize CSRF cookie on app mount
 onMounted(async () => {
@@ -32,20 +41,16 @@ onMounted(async () => {
   }
 })
 
-// Initialize real-time when user is authenticated
-watch(() => authStore.isAuthenticated, (isAuthenticated) => {
-  if (isAuthenticated) {
-    // Small delay to ensure auth is fully set up
-    setTimeout(() => {
-      initialize()
-    }, 500)
-  } else {
-    disconnect()
-  }
-}, { immediate: true })
+// Reconnect for the current identity, including direct account switches.
+const stopAuthWatch = watch(
+  () => authStore.user?.id ?? null,
+  (userId) => realtimeSession.sync(userId),
+  { immediate: true }
+)
 
 // Cleanup on unmount
 onUnmounted(() => {
-  disconnect()
+  stopAuthWatch()
+  realtimeSession.dispose()
 })
 </script>

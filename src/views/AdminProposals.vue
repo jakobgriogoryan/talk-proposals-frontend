@@ -31,33 +31,7 @@
               {{ proposal.title }}
             </router-link>
           </h3>
-          <div class="relative shrink-0">
-          <select
-            :value="proposal.status"
-            @change="updateStatus(proposal.id, $event.target.value)"
-              class="appearance-none px-3 sm:px-4 py-1.5 sm:py-2 pr-8 sm:pr-10 rounded-lg text-xs sm:text-sm font-medium border-2 shrink-0 shadow-sm hover:shadow-md transition-all bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 border-gray-300 dark:border-ocean-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-blue-500 dark:focus:border-ocean-400 cursor-pointer"
-              :class="getStatusSelectClass(proposal.status)"
-          >
-              <option value="pending" class="bg-white dark:bg-ocean-900">Pending</option>
-              <option value="approved" class="bg-white dark:bg-ocean-900">Approved</option>
-              <option value="rejected" class="bg-white dark:bg-ocean-900">Rejected</option>
-          </select>
-            <div class="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
-              <svg
-                class="w-4 h-4 text-gray-400 dark:text-ocean-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
+          <AppSelect :model-value="proposal.status" :options="statusOptions" compact :aria-label="`Status for ${proposal.title}`" @change="updateStatus(proposal.id, $event)" />
         </div>
         <p class="text-gray-600 dark:text-ocean-300 mb-2 sm:mb-3 line-clamp-2 text-xs sm:text-sm">
           {{ proposal.description }}
@@ -153,77 +127,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { proposalsApi, tagsApi } from '../api'
+import { useProposalList } from '../composables/useProposalList'
 import ProposalFilters from '../components/ProposalFilters.vue'
 import TopRatedSlider from '../components/TopRatedSlider.vue'
+import AppSelect from '../components/AppSelect.vue'
+import { statusOptions } from '../utils/selectOptions'
 
-const proposals = ref([])
 const tags = ref([])
-const loading = ref(false)
-const filters = ref({
-  search: '',
-  tags: [],
-  status: '',
-})
-const pagination = ref(null)
+const { proposals, loading, filters, pagination, fetchProposals, updateFilters,
+  goToPage, paginationPages, paginationInfo } = useProposalList(proposalsApi.getAllForAdmin)
 
 // Real-time event handlers
-const handleProposalSubmitted = (event) => {
+const handleProposalSubmitted = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalReviewed = (event) => {
+const handleProposalReviewed = () => {
   fetchProposals(pagination.value?.current_page || 1)
 }
 
-const handleProposalStatusChanged = (event) => {
-  const data = event.detail
-  const proposalIndex = proposals.value.findIndex(p => p.id === data.proposal_id || p.id === data.proposal?.id)
-  if (proposalIndex !== -1 && data.proposal) {
-    // Update the entire proposal object with the new data from the event
-    proposals.value[proposalIndex] = {
-      ...proposals.value[proposalIndex],
-      ...data.proposal,
-      status: data.new_status,
-    }
-  } else {
-    // If proposal not in current list, refresh to get updated data
-    fetchProposals(pagination.value?.current_page || 1)
-  }
-}
-
-const fetchProposals = async (page = 1) => {
-  loading.value = true
-  try {
-    const rawParams = {
-      page,
-      ...filters.value,
-    }
-
-    // Only send params that actually have a value
-    const params = {}
-    Object.entries(rawParams).forEach(([key, value]) => {
-      if (key === 'tags') {
-        if (Array.isArray(value) && value.length > 0) {
-          params.tags = value.join(',')
-    }
-        return
-      }
-
-      if (value !== '' && value !== null && value !== undefined) {
-        params[key] = value
-      }
-    })
-
-    const response = await proposalsApi.getAllForAdmin(params)
-    // Handle new ApiResponse format: { status, message, data: { proposals, pagination } }
-    const data = response.data.data || response.data
-    proposals.value = data.proposals
-    pagination.value = data.pagination
-  } catch (error) {} finally {
-    loading.value = false
-  }
+const handleProposalStatusChanged = () => {
+  // Broadcast payloads are partial; reload to honor the active filters.
+  fetchProposals(pagination.value?.current_page || 1)
 }
 
 const fetchTags = async () => {
@@ -235,125 +162,14 @@ const fetchTags = async () => {
   } catch (error) {}
 }
 
-const updateFilters = (newFilters) => {
-  filters.value = newFilters
-  fetchProposals(1)
-}
-
-const goToPage = (page) => {
-  fetchProposals(page)
-}
-
-// Generate pagination pages with ellipsis (best practice algorithm)
-const paginationPages = computed(() => {
-  if (!pagination.value || pagination.value.last_page <= 1) {
-    return []
-  }
-
-  const current = pagination.value.current_page
-  const last = pagination.value.last_page
-  const pages = []
-
-  // If 7 or fewer pages, show all
-  if (last <= 7) {
-    for (let i = 1; i <= last; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
-
-  // Always show first page
-  pages.push(1)
-
-  // Calculate window around current page (2 pages on each side)
-  const windowSize = 2
-  let windowStart = Math.max(2, current - windowSize)
-  let windowEnd = Math.min(last - 1, current + windowSize)
-
-  // Adjust window near boundaries
-  if (current <= windowSize + 1) {
-    // Near start: show pages 2-5
-    windowEnd = Math.min(5, last - 1)
-    windowStart = 2
-  } else if (current >= last - windowSize) {
-    // Near end: show last 5 pages
-    windowStart = Math.max(2, last - 4)
-    windowEnd = last - 1
-  }
-
-  // Add ellipsis after first page if there's a gap
-  if (windowStart > 2) {
-    pages.push('ellipsis')
-  }
-
-  // Add pages in window (avoid duplicates with first/last)
-  for (let i = windowStart; i <= windowEnd; i++) {
-    if (i !== 1 && i !== last) {
-      pages.push(i)
-    }
-  }
-
-  // Add ellipsis before last page if there's a gap
-  if (windowEnd < last - 1) {
-    pages.push('ellipsis')
-  }
-
-  // Always show last page (if not already shown)
-  if (last > 1) {
-    pages.push(last)
-  }
-
-  // Remove duplicate ellipsis (edge case)
-  const cleanedPages = []
-  for (let i = 0; i < pages.length; i++) {
-    if (pages[i] === 'ellipsis' && pages[i - 1] === 'ellipsis') {
-      continue
-    }
-    cleanedPages.push(pages[i])
-  }
-
-  return cleanedPages
-})
-
-// Calculate pagination info for display
-const paginationInfo = computed(() => {
-  if (!pagination.value) {
-    return { from: 0, to: 0 }
-  }
-  
-  const { current_page, per_page, total } = pagination.value
-  const from = total === 0 ? 0 : (current_page - 1) * per_page + 1
-  const to = Math.min(current_page * per_page, total)
-  
-  return { from, to }
-})
-
 const updateStatus = async (id, status) => {
   try {
-    const response = await proposalsApi.updateStatus(id, status)
-    // Handle new ApiResponse format: { status, message, data: { proposal } }
-    const data = response.data.data || response.data
-    const proposal = proposals.value.find(p => p.id === id)
-    if (proposal && data.proposal) {
-      Object.assign(proposal, data.proposal)
-    } else if (proposal) {
-      proposal.status = status
-    }
+    await proposalsApi.updateStatus(id, status)
+    // A changed status can exclude this row from the active filter, even without realtime.
+    await fetchProposals(pagination.value?.current_page || 1)
   } catch (error) {
     // Toast will be shown automatically by axios interceptor
   }
-}
-
-const getStatusClass = (status) => {
-  if (status === 'approved') return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-  if (status === 'rejected') return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-  return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-}
-
-const getStatusSelectClass = (status) => {
-  if (status === 'approved') return 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-  if (status === 'rejected') return 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300'
-  return 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
 }
 
 onMounted(() => {
@@ -364,12 +180,19 @@ onMounted(() => {
   window.addEventListener('proposal-submitted', handleProposalSubmitted)
   window.addEventListener('proposal-reviewed', handleProposalReviewed)
   window.addEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.addEventListener('realtime-resynced', handleProposalStatusChanged)
+  window.addEventListener('proposal-updated', handleProposalStatusChanged)
+  window.addEventListener('proposal-deleted', handleProposalStatusChanged)
+  window.addEventListener('review-updated', handleProposalStatusChanged)
 })
 
 onUnmounted(() => {
   window.removeEventListener('proposal-submitted', handleProposalSubmitted)
   window.removeEventListener('proposal-reviewed', handleProposalReviewed)
   window.removeEventListener('proposal-status-changed', handleProposalStatusChanged)
+  window.removeEventListener('realtime-resynced', handleProposalStatusChanged)
+  window.removeEventListener('proposal-updated', handleProposalStatusChanged)
+  window.removeEventListener('proposal-deleted', handleProposalStatusChanged)
+  window.removeEventListener('review-updated', handleProposalStatusChanged)
 })
 </script>
-

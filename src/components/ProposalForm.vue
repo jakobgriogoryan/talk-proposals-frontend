@@ -35,16 +35,18 @@
 
     <div>
       <label class="block text-sm font-medium text-gray-700 dark:text-ocean-200 mb-1.5 sm:mb-2">
-        PDF File <span class="text-gray-500 dark:text-ocean-400 text-xs">(optional, max 4MB)</span>
+        PDF File <span class="text-gray-500 dark:text-ocean-400 text-xs">(optional, max {{ MAX_PROPOSAL_FILE_MB }}MB)</span>
       </label>
       <input
+          ref="fileInput"
           type="file"
           accept=".pdf"
           @change="handleFileChange"
           class="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 text-sm sm:text-base file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-ocean-700 file:text-blue-700 dark:file:text-ocean-200 hover:file:bg-blue-100 dark:hover:file:bg-ocean-600 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
           :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500': errors.file || fileError }"
       />
-      <p class="text-xs text-gray-500 dark:text-ocean-400 mt-1">Maximum file size: 4MB. Only PDF files are allowed.</p>
+      <p class="text-xs text-gray-500 dark:text-ocean-400 mt-1">Maximum file size: {{ MAX_PROPOSAL_FILE_MB }}MB. Only PDF files are allowed.</p>
+      <button v-if="form.file || fileError" type="button" @click="clearSelectedFile" class="text-sm text-blue-600 dark:text-ocean-400 underline mt-1">Clear selected file</button>
       <div v-if="errors.file" class="text-red-500 dark:text-red-400 text-sm mt-1">
         {{ errors.file }}
       </div>
@@ -52,7 +54,8 @@
         {{ fileError }}
       </div>
       <div v-if="existingFile" class="text-sm text-gray-600 dark:text-ocean-300 mt-1">
-        Current file: <a :href="existingFile" target="_blank" class="text-blue-600 dark:text-ocean-400 hover:underline">{{ existingFile.split('/').pop() }}</a>
+        Current file: <button type="button" :disabled="downloadingFile" @click="downloadExistingFile" class="text-blue-600 dark:text-ocean-400 hover:underline disabled:opacity-50">{{ downloadingFile ? 'Downloading...' : 'Download PDF' }}</button>
+        <p v-if="downloadError" role="alert" class="mt-1 text-red-500 dark:text-red-400">{{ downloadError }}</p>
       </div>
     </div>
 
@@ -141,6 +144,8 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { tagsApi } from '../api'
+import { MAX_PROPOSAL_FILE_BYTES, MAX_PROPOSAL_FILE_MB, PROPOSAL_FILE_MIME } from '../config/proposals'
+import { downloadProposalFile, proposalDownloadError } from '../utils/proposalDownload'
 
 const props = defineProps({
   proposal: {
@@ -159,10 +164,30 @@ const props = defineProps({
 
 const emit = defineEmits(['submit'])
 
-const isEdit = !!props.proposal
+const isEdit = computed(() => !!props.proposal)
 const tagInput = ref('')
 const existingFile = ref(props.proposal?.file_path || null)
+const downloadingFile = ref(false)
+const downloadError = ref('')
+const downloadExistingFile = async () => {
+  if (!props.proposal?.id || downloadingFile.value) return
+  downloadingFile.value = true
+  downloadError.value = ''
+  try {
+    await downloadProposalFile(props.proposal.id, props.proposal.title)
+  } catch (error) {
+    downloadError.value = await proposalDownloadError(error)
+  } finally {
+    downloadingFile.value = false
+  }
+}
 const fileError = ref('')
+const fileInput = ref(null)
+const clearSelectedFile = () => {
+  form.value.file = null
+  fileError.value = ''
+  if (fileInput.value) fileInput.value.value = ''
+}
 const allTags = ref([])
 const tagSearchQuery = ref('')
 
@@ -185,6 +210,9 @@ watch(
           tags: props.proposal.tags?.map(t => t.name) || [],
         }
         existingFile.value = props.proposal.file_path || null
+        clearSelectedFile()
+        tagInput.value = ''
+        tagSearchQuery.value = ''
       }
     },
     { immediate: true }
@@ -231,17 +259,15 @@ const handleFileChange = (event) => {
   }
 
   // Validate file type
-  if (file.type !== 'application/pdf') {
+  if (file.type !== PROPOSAL_FILE_MIME && !(file.type === '' && /\.pdf$/i.test(file.name))) {
     fileError.value = 'Only PDF files are allowed'
     form.value.file = null
     event.target.value = ''
     return
   }
 
-  // Validate file size (4MB = 4 * 1024 * 1024 bytes)
-  const maxSize = 4 * 1024 * 1024
-  if (file.size > maxSize) {
-    fileError.value = 'File size must be less than 4MB'
+  if (file.size > MAX_PROPOSAL_FILE_BYTES) {
+    fileError.value = `File size must be at most ${MAX_PROPOSAL_FILE_MB}MB`
     form.value.file = null
     event.target.value = ''
     return
@@ -264,8 +290,7 @@ const removeTag = (index) => {
 }
 
 const handleSubmit = () => {
-  // Clear file error before submit
-  fileError.value = ''
+  if (props.loading || fileError.value) return
   emit('submit', form.value)
 }
 

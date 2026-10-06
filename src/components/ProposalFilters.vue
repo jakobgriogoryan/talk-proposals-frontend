@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white dark:bg-ocean-800 rounded-xl shadow-lg border border-gray-100 dark:border-ocean-700 mb-4 sm:mb-5 transition-colors" style="overflow: visible;">
+  <div class="relative z-20 bg-white dark:bg-ocean-800 rounded-xl shadow-lg border border-gray-100 dark:border-ocean-700 mb-4 sm:mb-5 transition-colors" style="overflow: visible;">
     <!-- Header with toggle -->
     <div
         class="flex items-center justify-between p-3 sm:p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-ocean-700 dark:to-ocean-600 cursor-pointer hover:from-blue-100 hover:to-indigo-100 dark:hover:from-ocean-600 dark:hover:to-ocean-500 transition-colors"
@@ -119,122 +119,7 @@
               </svg>
               Tags
             </label>
-            <div class="relative z-[9999]" ref="dropdownRef">
-              <!-- Dropdown Trigger Button -->
-              <button
-                  @click="toggleDropdown"
-                  type="button"
-                  class="w-full px-3 py-1.5 sm:py-2 border-2 border-gray-200 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-transparent transition-all text-sm bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 flex items-center justify-between"
-              >
-                <span class="text-left flex-1">
-                  {{ selectedTags.length > 0 ? `${selectedTags.length} tag${selectedTags.length > 1 ? 's' : ''} selected` : 'Select tags...' }}
-                </span>
-                <svg
-                    :class="[
-                    'w-5 h-5 text-gray-400 dark:text-ocean-500 transition-transform',
-                    isDropdownOpen ? 'rotate-180' : ''
-                  ]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                  <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-
-              <!-- Dropdown Menu -->
-              <Transition name="dropdown">
-                <div
-                    v-if="isDropdownOpen"
-                    class="absolute z-[9999] w-full mt-1 bg-white dark:bg-ocean-800 border-2 border-gray-200 dark:border-ocean-600 rounded-lg shadow-xl max-h-64 overflow-hidden"
-                >
-                  <!-- Search Input -->
-                  <div class="p-2 border-b border-gray-200 dark:border-ocean-700">
-                    <div class="relative">
-                      <input
-                          v-model="tagSearchQuery"
-                          type="text"
-                          placeholder="Search tags..."
-                          class="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 dark:border-ocean-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100 placeholder-gray-400 dark:placeholder-ocean-500"
-                          @click.stop
-                      />
-                      <svg
-                          class="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-ocean-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                      >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <!-- Tag Options List -->
-                  <div class="max-h-48 overflow-y-auto">
-                    <div v-if="filteredTags.length === 0" class="px-4 py-3 text-sm text-gray-500 dark:text-ocean-400 text-center">
-                      No tags found
-                    </div>
-                    <label
-                        v-for="tag in filteredTags"
-                        :key="tag.id"
-                        :class="[
-                        'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors',
-                        localFilters.tags.includes(tag.id)
-                          ? 'bg-blue-50 dark:bg-ocean-700/50 hover:bg-blue-100 dark:hover:bg-ocean-700'
-                          : 'hover:bg-gray-50 dark:hover:bg-ocean-700/30'
-                      ]"
-                    >
-                      <div class="relative flex items-center">
-                        <input
-                            type="checkbox"
-                            :value="tag.id"
-                            :checked="localFilters.tags.includes(tag.id)"
-                            @change="toggleTag(tag.id)"
-                            class="w-4 h-4 rounded border-2 transition-all cursor-pointer"
-                            :class="localFilters.tags.includes(tag.id)
-                            ? 'bg-blue-600 dark:bg-ocean-400 border-blue-600 dark:border-ocean-400 text-white'
-                            : 'border-gray-300 dark:border-ocean-600 bg-white dark:bg-ocean-900'"
-                        />
-                        <svg
-                            v-if="localFilters.tags.includes(tag.id)"
-                            class="absolute left-0.5 top-0.5 w-3 h-3 text-white pointer-events-none"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                          <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="3"
-                              d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      </div>
-                      <span
-                          :class="[
-                          'text-sm flex-1',
-                          localFilters.tags.includes(tag.id)
-                            ? 'text-blue-700 dark:text-ocean-200 font-medium'
-                            : 'text-gray-700 dark:text-ocean-300'
-                        ]"
-                      >
-            {{ tag.name }}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </Transition>
-            </div>
+            <TagMultiSelect v-model="localFilters.tags" :options="tags" @change="updateFilters" />
 
             <!-- Selected Tags Display -->
             <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-1.5 mt-2">
@@ -264,7 +149,7 @@
 
           <!-- Status Filter -->
           <div v-if="showStatusFilter" class="space-y-1.5">
-            <label class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-ocean-200">
+            <label for="filter-status" class="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-ocean-200">
               <svg
                   class="w-3.5 h-3.5 text-gray-500 dark:text-ocean-400"
                   fill="none"
@@ -280,33 +165,7 @@
               </svg>
               Status
             </label>
-            <div class="relative">
-              <select
-                  v-model="localFilters.status"
-                  class="w-full px-3 py-1.5 sm:py-2 border-2 border-gray-200 dark:border-ocean-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-ocean-400 focus:border-transparent transition-all appearance-none text-sm bg-white dark:bg-ocean-900 text-gray-900 dark:text-ocean-100"
-                  @change="updateFilters"
-              >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <div class="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <svg
-                    class="w-4 h-4 text-gray-400 dark:text-ocean-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                  <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
+            <AppSelect id="filter-status" v-model="localFilters.status" :options="statusOptions" placeholder="All Statuses" @change="updateFilters" />
             <!-- Status Badge Display -->
             <div v-if="localFilters.status" class="mt-1.5">
               <span
@@ -327,8 +186,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
+import AppSelect from './AppSelect.vue'
+import TagMultiSelect from './TagMultiSelect.vue'
+import { statusOptions } from '../utils/selectOptions'
 
 const props = defineProps({
   filters: {
@@ -352,35 +214,32 @@ const props = defineProps({
 const emit = defineEmits(['update:filters'])
 
 const isExpanded = ref(true)
-const tagSearchQuery = ref('')
-const isDropdownOpen = ref(false)
-const dropdownRef = ref(null)
 const localFilters = ref({
   search: props.filters.search || '',
-  tags: props.filters.tags || [],
+  tags: [...(props.filters.tags || [])],
   status: props.filters.status || '',
 })
 
 // Debounced update for search input (300ms delay)
 const updateFilters = () => {
-  emit('update:filters', { ...localFilters.value })
+  emit('update:filters', { ...localFilters.value, tags: [...localFilters.value.tags] })
 }
 
 const debouncedUpdate = useDebounceFn(() => {
   updateFilters()
 }, 300)
 
-// Optimized: Watch specific properties instead of deep watch
+// Track tag identities as well as their count, without mutating parent state.
 watch(
-    () => [props.filters.search, props.filters.status, props.filters.tags?.length],
+    () => [props.filters.search, props.filters.status, props.filters.tags],
     () => {
       localFilters.value = {
         search: props.filters.search || '',
-        tags: props.filters.tags || [],
+        tags: [...(props.filters.tags || [])],
         status: props.filters.status || '',
       }
     },
-    { immediate: true }
+    { immediate: true, deep: true }
 )
 
 const activeFiltersCount = computed(() => {
@@ -395,51 +254,12 @@ const selectedTags = computed(() => {
   return Array.isArray(localFilters.value.tags) ? localFilters.value.tags : []
 })
 
-const filteredTags = computed(() => {
-  if (!tagSearchQuery.value.trim()) {
-    return props.tags
-  }
-  const query = tagSearchQuery.value.toLowerCase()
-  return props.tags.filter(tag => tag.name.toLowerCase().includes(query))
-})
 
 const getTagName = (tagId) => {
   const tag = props.tags.find(t => t.id === tagId)
   return tag ? tag.name : ''
 }
 
-const toggleTag = (tagId) => {
-  const index = localFilters.value.tags.indexOf(tagId)
-  if (index > -1) {
-    localFilters.value.tags.splice(index, 1)
-  } else {
-    localFilters.value.tags.push(tagId)
-  }
-  updateFilters()
-}
-
-const toggleDropdown = () => {
-  isDropdownOpen.value = !isDropdownOpen.value
-}
-
-const closeDropdown = () => {
-  isDropdownOpen.value = false
-}
-
-// Handle click outside
-const handleClickOutside = (event) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
-    closeDropdown()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 
 const removeTag = (tagId) => {
   localFilters.value.tags = localFilters.value.tags.filter(id => id !== tagId)
@@ -470,7 +290,6 @@ const clearFilters = () => {
     tags: [],
     status: '',
   }
-  tagSearchQuery.value = ''
   updateFilters()
 }
 </script>
@@ -489,52 +308,5 @@ const clearFilters = () => {
   opacity: 0;
   padding-top: 0;
   padding-bottom: 0;
-}
-
-/* Dropdown animations */
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: all 0.2s ease;
-}
-
-.dropdown-enter-from {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-/* Custom scrollbar for tag container */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 3px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
-}
-
-.dark .overflow-y-auto::-webkit-scrollbar-track {
-  background: #1a2a3a;
-}
-
-.dark .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #2d4a5f;
-}
-
-.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #3d5a6f;
 }
 </style>
