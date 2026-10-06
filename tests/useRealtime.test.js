@@ -32,6 +32,12 @@ const makeChannel = (name) => {
 }
 
 const latestChannel = (name) => createdChannels.findLast((channel) => channel.name === name)
+// Independent broadcast contract: six domain events and two lifecycle callbacks.
+const expectedChannelEvents = [
+  '.proposal.submitted', '.proposal.reviewed', '.proposal.status.changed',
+  '.proposal.updated', '.proposal.deleted', '.review.updated',
+  '.pusher:subscription_succeeded', '.pusher:subscription_error',
+].sort()
 
 describe('useRealtime', () => {
   beforeEach(() => {
@@ -83,26 +89,18 @@ describe('useRealtime', () => {
     vi.useRealTimers()
   })
 
-  it('uses the canonical event names on reviewer and user channels', () => {
-    useAuthStore().user = { id: 22, role: 'reviewer' }
+  it.each(['reviewer', 'admin'])('uses the canonical event names on %s and user channels', role => {
+    useAuthStore().user = { id: 22, role }
 
     useRealtime().initialize()
 
-    expect(Array.from(latestChannel('proposals').listeners.keys())).toEqual([
-      REALTIME_EVENTS.submitted,
-      REALTIME_EVENTS.reviewed,
-      REALTIME_EVENTS.statusChanged,
-      '.pusher:subscription_succeeded',
-      '.pusher:subscription_error',
-    ])
-    expect(Array.from(latestChannel('user.22').listeners.keys())).toEqual([
-      REALTIME_EVENTS.submitted,
-      REALTIME_EVENTS.reviewed,
-      REALTIME_EVENTS.statusChanged,
-      '.pusher:subscription_succeeded',
-      '.pusher:subscription_error',
-    ])
-    expect(REALTIME_EVENTS.statusChanged).toBe('.proposal.status.changed')
+    expect(Array.from(latestChannel('proposals').listeners.keys()).sort()).toEqual(expectedChannelEvents)
+    expect(Array.from(latestChannel('user.22').listeners.keys()).sort()).toEqual(expectedChannelEvents)
+    expect(REALTIME_EVENTS).toEqual({
+      submitted: '.proposal.submitted', reviewed: '.proposal.reviewed',
+      statusChanged: '.proposal.status.changed', updated: '.proposal.updated',
+      deleted: '.proposal.deleted', reviewUpdated: '.review.updated',
+    })
   })
 
   it('removes exact callbacks and leaves old channels before reinitializing', () => {
@@ -115,8 +113,8 @@ describe('useRealtime', () => {
 
     realtime.initialize()
 
-    expect(firstSharedChannel.stopListening).toHaveBeenCalledTimes(5)
-    expect(firstUserChannel.stopListening).toHaveBeenCalledTimes(5)
+    expect(firstSharedChannel.stopListening).toHaveBeenCalledTimes(expectedChannelEvents.length)
+    expect(firstUserChannel.stopListening).toHaveBeenCalledTimes(expectedChannelEvents.length)
     firstSharedChannel.listeners.forEach((callback, eventName) => {
       expect(firstSharedChannel.stopListening).toHaveBeenCalledWith(eventName, callback)
     })
@@ -126,6 +124,38 @@ describe('useRealtime', () => {
     expect(echoMock.leave).toHaveBeenCalledWith('proposals')
     expect(echoMock.leave).toHaveBeenCalledWith('user.33')
     expect(echoMock.private).toHaveBeenCalledTimes(4)
+  })
+
+  it.each([
+    ['.proposal.updated', 'proposal-updated'],
+    ['.proposal.deleted', 'proposal-deleted'],
+    ['.review.updated', 'review-updated'],
+  ])('ignores stale %s callbacks while handling the current subscription', (eventName, dispatchedName) => {
+    useAuthStore().user = { id: 33, role: 'reviewer' }
+    const cache = useCacheStore()
+    const push = vi.spyOn(useNotificationsStore(), 'push')
+    const realtime = useRealtime()
+    realtime.initialize()
+    const stale = latestChannel('proposals').listeners.get(eventName)
+    realtime.initialize()
+    const current = latestChannel('proposals').listeners.get(eventName)
+    const payload = { event_id: 'changed-7', proposal_id: 7 }
+    cache.set('proposals:one:7', { stale: true })
+
+    stale(payload)
+    expect(cache.has('proposals:one:7')).toBe(true)
+    expect(window.dispatchEvent).not.toHaveBeenCalled()
+    current(payload)
+    expect(cache.has('proposals:one:7')).toBe(false)
+    expect(window.dispatchEvent).toHaveBeenCalledOnce()
+    expect(window.dispatchEvent.mock.calls[0][0]).toMatchObject({ type: dispatchedName, detail: payload })
+    expect(push).not.toHaveBeenCalled()
+
+    realtime.disconnect()
+    cache.set('proposals:one:7', { stale: true })
+    current(payload)
+    expect(cache.has('proposals:one:7')).toBe(true)
+    expect(window.dispatchEvent).toHaveBeenCalledOnce()
   })
 
   it('returns scoped cleanup for a proposal channel', () => {

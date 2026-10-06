@@ -25,6 +25,10 @@ const mountForm = () => {
   const app = renderer.createApp({ render: () => h(ProposalForm, {
     proposal: {id: 7, title: 'My Proposal', description: 'Description', tags: [], file_path: '/proposals/7/download'},
   }) })
+  app.component('RouterLink', {
+    props: ['to'],
+    setup: (props, { slots }) => () => h('a', { href: props.to }, slots.default?.()),
+  })
   app.mount(root); apps.push(app)
   return root
 }
